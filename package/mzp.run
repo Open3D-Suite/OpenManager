@@ -1,0 +1,6 @@
+name "OpenScene"
+version 1.0
+description "Scene states / batch render manager for 3ds Max"
+run "install.ms"
+drop "install.ms"
+clear temp on MAX exit
