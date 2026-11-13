@@ -55,6 +55,8 @@ Para probar cambios sin reinstalar: copia `package/OpenScene/` sobre la instalad
 | `OpenScene.mzp` | el instalador ya compilado |
 | `uninstall.ms` | desinstalador |
 | `LICENSE` | licencia MIT (va también dentro del .mzp) |
+| `CHANGELOG.md` | qué cambia en cada versión |
+| `CLAUDE.md` | notas para trabajar en el código con Claude |
 | `package/install.ms`, `mzp.run`, `OpenScene.mcr` | instalador y botón de Max |
 | `package/OpenScene/openscene_core.ms` | funciones MAXScript que leen y cambian la escena |
 | `package/OpenScene/OpenScene_startup.ms` | aviso al abrir un `.max` con setups de otro gestor, para convertirlos |
