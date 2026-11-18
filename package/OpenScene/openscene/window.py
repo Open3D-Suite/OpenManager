@@ -10,7 +10,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from . import cards, cards2, dialogs, icons, maxlink, model, widgets
 from .widgets import Blocker, Card, GridBoard, PRIMARY, TINTS, blend, icon, menu_tool, pal, text_color, tool
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 TITLE = "OpenScene"
 OBJECT_NAME = "OpenScene"
 TOP_ICON = 22
@@ -1189,13 +1189,33 @@ class SceneManager(QtWidgets.QDockWidget):
             self.tree.setCurrentItem(it)
             self.tree.scrollToItem(it)
 
+    def share_lists(self, s):
+        """A new setup starts with the layers and objects the other setups list (the list is shared), at their state
+        in the scene now, and with those cards on when another setup uses them."""
+        scene_layers = {l["name"]: l for l in self.scene.layers}
+        have = set(l["name"] for l in s["layers"]["set"])
+        for e in model.shared_rows(self.setups, "layers", "name"):
+            if e["name"] not in have:
+                s["layers"]["set"].append(cards.scene_layer_entry(scene_layers, e["name"]) if e["name"] in scene_layers
+                                          else model.copy_entry(e))
+        have = set(o["handle"] for o in s["objects"]["set"])
+        for e in model.shared_rows(self.setups, "objects", "handle"):
+            if e["handle"] not in have:
+                so = self.scene.obj(e["handle"])
+                s["objects"]["set"].append(model.object_entry(e["handle"], so["name"], so["visible"], True) if so
+                                           else model.copy_entry(e))
+        for key in ("layers", "objects"):
+            if any(x[key]["enabled"] for x in self.setups):
+                s[key]["enabled"] = True
+        return s
+
     def add_empty(self):
         s = model.empty_setup(self._new_id())
         s["camera"]["handle"] = self.scene.active_camera
         cam = self.scene.camera(self.scene.active_camera)
         s["camera"]["name"] = cam["name"] if cam else ""
         s["resolution"].update(width=self.scene.width, height=self.scene.height, ratio=model.ratio(self.scene.width, self.scene.height))
-        self._add(s)
+        self._add(self.share_lists(s))
 
     def fetch_scene(self):
         self.reload_scene()
@@ -1207,7 +1227,7 @@ class SceneManager(QtWidgets.QDockWidget):
         s["layers"]["set"] = [model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True)) for l in sc.layers]
         if sc.env_class:
             s["environment"].update(cls=sc.env_class, name=sc.env_name)
-        self._add(s)
+        self._add(self.share_lists(s))
         self.toast("Fetched the current scene into a new setup")
 
     def per_camera(self):
@@ -1221,7 +1241,7 @@ class SceneManager(QtWidgets.QDockWidget):
             s = model.empty_setup(self._new_id())
             s["camera"].update(handle=c["handle"], name=c["name"])
             s["resolution"].update(width=self.scene.width, height=self.scene.height, ratio=model.ratio(self.scene.width, self.scene.height))
-            self.setups.append(s)
+            self.setups.append(self.share_lists(s))
         self.rebuild_rows()
         self.changed(apply=False)
         self.toast("Created %d setup(s), one per camera" % len(cams))
@@ -1233,7 +1253,7 @@ class SceneManager(QtWidgets.QDockWidget):
         cam = self.scene.camera(h)
         s["camera"].update(handle=h, name=cam["name"] if cam else "")
         s["resolution"].update(width=self.scene.width, height=self.scene.height, ratio=model.ratio(self.scene.width, self.scene.height))
-        self._add(s)
+        self._add(self.share_lists(s))
         self.toast("New camera: %s" % (cam["name"] if cam else h))
 
     def duplicate(self):

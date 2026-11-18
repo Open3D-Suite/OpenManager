@@ -970,13 +970,49 @@ class FlagTable(QtWidgets.QTableWidget):
         fit_columns(self)
 
     def flag_item(self, on):
+        """on: True / False, or None for a row this setup doesn't set yet (shown half ticked; a click sets it)."""
         it = QtWidgets.QTableWidgetItem()
         it.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsSelectable)
-        it.setCheckState(QtCore.Qt.Checked if on else QtCore.Qt.Unchecked)
+        it.setCheckState(QtCore.Qt.PartiallyChecked if on is None else (QtCore.Qt.Checked if on else QtCore.Qt.Unchecked))
+        return it
+
+    def name_item(self, text, key, unset=False):
+        it = QtWidgets.QTableWidgetItem(text)
+        it.setData(QtCore.Qt.UserRole, key)
+        it.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
+        if unset:
+            f = it.font()
+            f.setItalic(True)
+            it.setFont(f)
+            it.setForeground(self.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text))
+            it.setToolTip("Listed by another setup, not set in this one yet: here it keeps whatever the setup applied before "
+                          "left. Tick or untick a box to set it for this setup.")
         return it
 
 
+NOT_SET_TIP = "Rows half ticked are listed by other setups but not set in this one yet"
+
+
+def scene_layer_entry(scene_layers, name):
+    """A row for this layer at its state in the scene now (scene_layers: name -> layer of the last scene read)."""
+    l = scene_layers.get(name)
+    if l is None:
+        return model.layer_entry(name)
+    return model.layer_entry(name, l["visible"], l.get("frozen", False), l.get("render", True))
+
+
+def share_rows(sm, own, key, field, entries):
+    """New rows of the Layers / Objects card go to every other setup too, with the same values; from then on each
+    setup keeps its own."""
+    for x in sm.setups:
+        if x is own:
+            continue
+        have = set(e[field] for e in x[key]["set"])
+        x[key]["set"].extend(model.copy_entry(e) for e in entries if e[field] not in have)
+
+
 class LayersCard(Card):
+    """The list of layers is shared by every setup; the ticks are each setup's own."""
     CARD_ID = 14
     FIELD = {"on": "visible", "isfrozen": "freeze", "renderable": "render", "primaryVisibility": "vcam"}
 
@@ -990,11 +1026,14 @@ class LayersCard(Card):
         self._filter_timer.setInterval(180)
         self._filter_timer.timeout.connect(lambda: self.fill(self.setup()) if self.setup() else None)
         self.filter.textChanged.connect(lambda _: self._filter_timer.start())
-        fetch = tool("fetch", "Take every layer as it is now in the scene", slot=self._fetch)
-        self.add = tool("add", "Add the selected layers (in the Layer Explorer, or those of the selected objects)", slot=self._add_selected)
-        rm = tool("delete", "Remove the selected layers from this setup", slot=self._remove)
+        fetch = tool("fetch", "Take every layer as it is now in the scene (the layers new to the list go to every setup)",
+                     slot=self._fetch)
+        self.add = tool("add", "Add the selected layers (in the Layer Explorer, or those of the selected objects) to every setup",
+                        slot=self._add_selected)
+        rm = tool("delete", "Remove the selected layers from the list of every setup", slot=self._remove)
         self.body_layout.addWidget(hrow(self.filter, fetch, self.add, rm, stretch_index=0))
         self.table = FlagTable()
+        self.table.setToolTip(NOT_SET_TIP)
         self.table.itemChanged.connect(self._changed)
         self.body_layout.addWidget(self.table)
 
@@ -1004,54 +1043,56 @@ class LayersCard(Card):
     def fill(self, s):
         cols = self.columns()
         flt = self.filter.text().lower()
-        rows = [l for l in s["layers"]["set"] if flt in l["name"].lower()]
+        own = {l["name"]: l for l in s["layers"]["set"]}
+        rows = [e["name"] for e in model.shared_rows(self.sm.setups, "layers", "name") if flt in e["name"].lower()]
         with Blocker(self.table):
             self.table.clear()
             self.table.setColumnCount(1 + len(cols))
             self.table.setHorizontalHeaderLabels(["Name"] + [p.get("short") or p["name"] for p in cols])
             self.table.setRowCount(len(rows))
             names = set(x["name"] for x in self.sm.scene.layers)
-            for r, l in enumerate(rows):
-                it = QtWidgets.QTableWidgetItem(l["name"] if l["name"] in names else l["name"] + " (missing)")
-                it.setData(QtCore.Qt.UserRole, l["name"])
-                it.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
-                self.table.setItem(r, 0, it)
+            for r, name in enumerate(rows):
+                l = own.get(name)
+                self.table.setItem(r, 0, self.table.name_item(name if name in names else name + " (missing)", name, l is None))
                 for c, p in enumerate(cols):
-                    f = self.FIELD.get(p["name"])
-                    on = l[f] if f else l.get("extra", {}).get(p["name"], p.get("value", False) is True)
+                    if l is None:
+                        on = None
+                    else:
+                        f = self.FIELD.get(p["name"])
+                        on = l[f] if f else l.get("extra", {}).get(p["name"], p.get("value", False) is True)
                     fi = self.table.flag_item(on)
                     fi.setData(QtCore.Qt.UserRole, p["name"])
                     self.table.setItem(r, c + 1, fi)
             fit_columns(self.table)
 
-    def _entry(self, s, name):
-        return next((l for l in s["layers"]["set"] if l["name"] == name), None)
-
     def _changed(self, it):
         s = self.setup()
         if not s or it.column() == 0:
-            return
-        name = self.table.item(it.row(), 0).data(QtCore.Qt.UserRole)
-        l = self._entry(s, name)
-        if l is None:
             return
         on = it.checkState() == QtCore.Qt.Checked
         prop = it.data(QtCore.Qt.UserRole)
         # the same change goes to every selected row (quick for many layers)
         rows = set(i.row() for i in self.table.selectedItems())
-        targets = [l]
-        if it.row() in rows and len(rows) > 1:
-            by_name = {x["name"]: x for x in s["layers"]["set"]}  # one look-up per row, not a search (thousands of layers)
-            targets = [by_name.get(self.table.item(r, 0).data(QtCore.Qt.UserRole)) for r in rows]
-        for l in targets:
-            if l is None:
-                continue
+        if it.row() not in rows or len(rows) < 2:
+            rows = {it.row()}
+        own = {x["name"]: x for x in s["layers"]["set"]}  # one look-up per row, not a search (thousands of layers)
+        scene = None
+        made = False
+        for r in rows:
+            name = self.table.item(r, 0).data(QtCore.Qt.UserRole)
+            l = own.get(name)
+            if l is None:  # a row of the shared list this setup didn't set yet: it starts from the scene as it is now
+                if scene is None:
+                    scene = {x["name"]: x for x in self.sm.scene.layers}
+                l = own[name] = scene_layer_entry(scene, name)
+                s["layers"]["set"].append(l)
+                made = True
             f = self.FIELD.get(prop)
             if f:
                 l[f] = on
             else:
                 l.setdefault("extra", {})[prop] = on
-        if len(targets) > 1:
+        if len(rows) > 1 or made:
             self.fill(s)
         self.sm.changed()
 
@@ -1061,6 +1102,7 @@ class LayersCard(Card):
             return
         s["layers"]["set"] = [model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True))
                               for l in self.sm.scene.layers]
+        share_rows(self.sm, s, "layers", "name", s["layers"]["set"])
         if not s["layers"]["enabled"]:
             s["layers"]["enabled"] = True
             self.refresh()
@@ -1084,8 +1126,9 @@ class LayersCard(Card):
         s = self.setup()
         if not s:
             return
-        for l in layers:
-            s["layers"]["set"].append(model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True)))
+        new = [model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True)) for l in layers]
+        s["layers"]["set"].extend(new)
+        share_rows(self.sm, s, "layers", "name", new)
         self.fill(s)
         self.sm.changed()
 
@@ -1094,21 +1137,27 @@ class LayersCard(Card):
         if not s:
             return
         names = set(self.table.item(r, 0).data(QtCore.Qt.UserRole) for r in set(i.row() for i in self.table.selectedItems()))
-        s["layers"]["set"] = [l for l in s["layers"]["set"] if l["name"] not in names]
+        if not names:
+            return
+        for x in self.sm.setups:  # the list is shared: a row leaves every setup
+            x["layers"]["set"] = [l for l in x["layers"]["set"] if l["name"] not in names]
         self.fill(s)
         self.sm.changed()
+        self.sm.toast("Removed %d layer(s) from every setup" % len(names))
 
 
 class ObjectsCard(Card):
+    """The list of objects is shared by every setup; the ticks are each setup's own."""
     CARD_ID = 23
 
     def build(self):
-        add = tool("add", "Add the objects selected in the scene", slot=self._add_selected)
-        rm = tool("delete", "Remove the selected rows from this setup", slot=self._remove)
+        add = tool("add", "Add the objects selected in the scene to every setup", slot=self._add_selected)
+        rm = tool("delete", "Remove the selected rows from the list of every setup", slot=self._remove)
         sel = tool("select", "Select these objects in the scene", slot=self._select)
         self.count = muted("")
         self.body_layout.addWidget(hrow(self.count, None, sel, add, rm))
         self.table = FlagTable()
+        self.table.setToolTip(NOT_SET_TIP)
         self.table.itemChanged.connect(self._changed)
         self.body_layout.addWidget(self.table)
 
@@ -1122,31 +1171,38 @@ class ObjectsCard(Card):
             return o["renderable"]
         return o.get("extra", {}).get(name, True)
 
+    def _scene_entry(self, e):
+        """A row for this object at its state in the scene now (e: the row another setup has)."""
+        so = self.sm.scene.obj(e["handle"])
+        if so is None:
+            return model.object_entry(e["handle"], e.get("name") or "", e.get("visible", True), e.get("renderable", True))
+        return model.object_entry(e["handle"], so["name"], so["visible"], True)
+
     def fill(self, s):
         cols = self.columns()
-        rows = s["objects"]["set"]
-        unknown = [o["handle"] for o in rows if o.get("handle") is not None and self.sm.scene.obj(o["handle"]) is None]
+        shared = model.shared_rows(self.sm.setups, "objects", "handle")
+        own = {o["handle"]: o for o in s["objects"]["set"]}
+        unknown = [o["handle"] for o in shared if self.sm.scene.obj(o["handle"]) is None]
         if unknown:  # pasted / imported / duplicated setups: their objects weren't in the last scene read
             from . import maxlink
             try:
                 self.sm.scene.add_objects(maxlink.nodes_info(unknown))
             except Exception:
                 pass
-        self.count.setText("%d object%s" % (len(rows), "" if len(rows) == 1 else "s") if rows else "Select objects in the scene, then +")
+        n = len(shared)
+        self.count.setText("%d object%s" % (n, "" if n == 1 else "s") if n else "Select objects in the scene, then +")
         with Blocker(self.table):
             self.table.clear()
             self.table.setColumnCount(1 + len(cols))
             self.table.setHorizontalHeaderLabels(["Name"] + [("Visible" if p["name"] == "isNodeHidden" else p.get("short") or p["name"]) for p in cols])
-            self.table.setRowCount(len(rows))
-            for r, o in enumerate(rows):
-                so = self.sm.scene.obj(o["handle"])
-                name = so["name"] if so else (o.get("name") or "#%s" % o["handle"]) + " (missing)"
-                it = QtWidgets.QTableWidgetItem(name)
-                it.setData(QtCore.Qt.UserRole, o["handle"])
-                it.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
-                self.table.setItem(r, 0, it)
+            self.table.setRowCount(n)
+            for r, e in enumerate(shared):
+                o = own.get(e["handle"])
+                so = self.sm.scene.obj(e["handle"])
+                name = so["name"] if so else (e.get("name") or "#%s" % e["handle"]) + " (missing)"
+                self.table.setItem(r, 0, self.table.name_item(name, e["handle"], o is None))
                 for c, p in enumerate(cols):
-                    fi = self.table.flag_item(self._value(o, p["name"]))
+                    fi = self.table.flag_item(None if o is None else self._value(o, p["name"]))
                     fi.setData(QtCore.Qt.UserRole, p["name"])
                     self.table.setItem(r, c + 1, fi)
             fit_columns(self.table)
@@ -1160,16 +1216,27 @@ class ObjectsCard(Card):
         rows = set(i.row() for i in self.table.selectedItems())
         if it.row() not in rows:
             rows = {it.row()}
-        handles = set(self.table.item(r, 0).data(QtCore.Qt.UserRole) for r in rows)
-        for o in s["objects"]["set"]:
-            if o["handle"] in handles:
-                if prop == "isNodeHidden":
-                    o["visible"] = on
-                elif prop == "renderable":
-                    o["renderable"] = on
-                else:
-                    o.setdefault("extra", {})[prop] = on
-        if len(rows) > 1:
+        own = {o["handle"]: o for o in s["objects"]["set"]}
+        shared = None
+        made = False
+        for r in rows:
+            h = self.table.item(r, 0).data(QtCore.Qt.UserRole)
+            o = own.get(h)
+            if o is None:  # a row of the shared list this setup didn't set yet: it starts from the scene as it is now
+                if shared is None:
+                    shared = {e["handle"]: e for e in model.shared_rows(self.sm.setups, "objects", "handle")}
+                if h not in shared:
+                    continue
+                o = own[h] = self._scene_entry(shared[h])
+                s["objects"]["set"].append(o)
+                made = True
+            if prop == "isNodeHidden":
+                o["visible"] = on
+            elif prop == "renderable":
+                o["renderable"] = on
+            else:
+                o.setdefault("extra", {})[prop] = on
+        if len(rows) > 1 or made:
             self.fill(s)
         self.sm.changed()
 
@@ -1179,7 +1246,7 @@ class ObjectsCard(Card):
             return
         from . import maxlink
         have = set(o["handle"] for o in s["objects"]["set"])
-        added = 0
+        new = []
         sel = self.sm.selected_handles()
         # the scene read only lists the objects the setups use: the selected ones are read now
         self.sm.scene.add_objects(maxlink.nodes_info([h for h in sel if self.sm.scene.obj(h) is None]))
@@ -1189,10 +1256,11 @@ class ObjectsCard(Card):
             so = self.sm.scene.obj(h)
             if so is None:
                 continue
-            s["objects"]["set"].append(model.object_entry(h, so["name"], so["visible"], True))
-            added += 1
-        if not added:
+            new.append(model.object_entry(h, so["name"], so["visible"], True))
+        if not new:
             self.sm.toast("Select geometry in the scene first")
+        s["objects"]["set"].extend(new)
+        share_rows(self.sm, s, "objects", "handle", new)
         self.fill(s)
         self.sm.changed()
 
@@ -1201,14 +1269,17 @@ class ObjectsCard(Card):
         if not s:
             return
         hs = set(self.table.item(r, 0).data(QtCore.Qt.UserRole) for r in set(i.row() for i in self.table.selectedItems()))
-        s["objects"]["set"] = [o for o in s["objects"]["set"] if o["handle"] not in hs]
+        if not hs:
+            return
+        for x in self.sm.setups:  # the list is shared: a row leaves every setup
+            x["objects"]["set"] = [o for o in x["objects"]["set"] if o["handle"] not in hs]
         self.fill(s)
         self.sm.changed()
+        self.sm.toast("Removed %d object(s) from every setup" % len(hs))
 
     def _select(self):
-        s = self.setup()
-        if s:
-            self.sm.select_handles([o["handle"] for o in s["objects"]["set"]])
+        if self.setup():
+            self.sm.select_handles([o["handle"] for o in model.shared_rows(self.sm.setups, "objects", "handle")])
 
 
 class LightsCard(Card):

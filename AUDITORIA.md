@@ -91,5 +91,7 @@ que tiene y las mejoras propuestas, ordenadas por impacto.
 5. Hacer merge de una escena grande con la ventana abierta: no debe congelarse más que el merge.
 6. Batch con un setup roto (una ruta de script que no existe…): el lote sigue y al final sale el resumen.
 7. Guardar y volver a abrir un `.max` con muchos setups o capas: se leen bien (comprimidos).
-8. **Un `.max` con setups de antes de la 2.0.0**: se abren con sus setups y sus mezclas de entorno; al guardar y volver
+8. **Layers / Objects compartidos**: añadir una capa en un setup y comprobar que aparece en los demás; ocultarla en
+   uno y que en otro siga visible al aplicarlo; un setup nuevo trae la lista entera; quitarla la quita de todos.
+9. **Un `.max` con setups de antes de la 2.0.0**: se abren con sus setups y sus mezclas de entorno; al guardar y volver
    a abrir siguen ahí (ya con la clave nueva).

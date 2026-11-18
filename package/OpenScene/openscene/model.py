@@ -389,6 +389,25 @@ def object_entry(handle, name, visible=True, renderable=True):
     return {"handle": handle, "name": name, "visible": visible, "renderable": renderable, "extra": {}}
 
 
+def copy_entry(e):
+    """A row of the Layers / Objects card for another setup: same values, its own dicts."""
+    return dict(e, extra=dict(e.get("extra") or {}))
+
+
+def shared_rows(setups, key, field):
+    """The rows of the Layers (key "layers", field "name") or Objects ("objects", "handle") card are one list for all
+    the setups; each setup keeps its own values. This is that list: every row some setup has, in the order they were
+    added, as the first entry found for each."""
+    seen, out = set(), []
+    for s in setups:
+        for e in s[key]["set"]:
+            k = e.get(field)
+            if k is not None and k not in seen:
+                seen.add(k)
+                out.append(e)
+    return out
+
+
 def ratio(w, h):
     if not h:
         return DEFAULT_RATIO

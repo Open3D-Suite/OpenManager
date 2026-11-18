@@ -31,10 +31,17 @@ GitHub: `AdanCastellanos/OpenScene` (public, MIT, branch `main`).
   a scripted attribute redefined with the same ID and other parameters wipes the stored data.
 - Card ids, the `props` keys (`card|class|property`) and the settings files are what saved setups and layouts depend
   on: changing them needs a migration.
+- The Layers and Objects cards show **one list shared by all setups** (`model.shared_rows`); each setup keeps its own
+  values in its own `set`. Adding a row copies it to every setup (`cards.share_rows`, with the scene's current
+  values), removing deletes it from all, new setups get the whole list (`window.share_lists`). A row a setup
+  doesn't have yet is shown half ticked and is not applied; ticking it creates the entry from the scene.
 - Decided by the user: the scene state carries over from one setup to the next (no reset between setups), and Corona
   Interactive is not stopped when a setup is applied (setting `ipr_corona_restart`, off by default).
 
 ## Working on it
+- Card logic can be tested with real Qt outside Max: a scratch venv with `PySide6-Essentials`, `QT_QPA_PLATFORM=offscreen`,
+  stand-in `pymxs` / `qtmax` modules and a small fake window object (`settings`, `setups`, `active()`, `scene`,
+  `enabled_rows()`, `changed()`, `locked()`...).
 - Nothing can be run inside 3ds Max from here. Check what can be checked: `py_compile` every module, load
   `model.py` / `external.py` standalone and test them, check that every `rt.oscn_*` used in Python is defined in the
   `.ms` files, and say clearly in the reply what still has to be tested in Max.

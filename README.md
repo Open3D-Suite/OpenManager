@@ -7,7 +7,7 @@ Un **setup** guarda, para un mismo `.max`: cámara, resolución, frames, sol, do
 luces, xrefs, ruta de salida, ajustes de render, post-producción del VFB (Corona) y más. Al clicar un setup
 se aplica a la escena; el **Batch Render** (la tetera) renderiza todos los marcados.
 
-Versión **2.0.0** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
+Versión **2.1.0** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
 
 ## Instalar
 
@@ -32,6 +32,9 @@ Atmosphere, Layers, Objects, XRef Scenes, Variants, Render Output, Render Settin
 Render Elements, Post-Production / VFB (Corona), Script File, Script Editor, Thumbnail, Todo y Notes.
 Cada ajuste se elige en el **Selector de propiedades** y tiene un lápiz para tomar el valor de la escena.
 
+- **Layers y Objects comparten la lista entre setups**: lo que añades en uno aparece en todos, y cada setup guarda
+  sus propias casillas (oculto en uno, visible en otro). Una fila a medio marcar es de la lista pero ese setup aún no
+  la fija; al marcarla, se fija. Quitar una fila la quita de todos.
 - **Doble clic en la barra de color** de una tarjeta: se pliega y queda solo la barra; otro doble clic la despliega al tamaño que tenía.
 - **Tamaño de iconos** (la tuerca > Theme > Icon Size): pequeño, mediano (recomendado) o grande; se aplica al momento.
 

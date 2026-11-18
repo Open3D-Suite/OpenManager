@@ -2,6 +2,17 @@
 
 Formato: una sección por versión, la más reciente arriba. Cada entrada dice qué cambia para quien usa la herramienta.
 
+## 2.1.0 · 2026-11-18
+
+- **Layers y Objects: una sola lista para todos los setups.** Las capas y objetos que añades en un setup (con "+" o con
+  *fetch*) aparecen en todos los demás con el estado que tienen en la escena en ese momento; desde ahí, cada setup
+  guarda sus propias casillas. Así una capa puede estar oculta en un setup y visible en otro sin volver a añadirla.
+- Un setup nuevo empieza con toda la lista (y con Layers / Objects encendidos si otro setup los usa).
+- Las filas que otro setup tiene pero este aún no fija se ven en cursiva y a medio marcar: no se tocan al aplicar
+  (se quedan como las dejó el setup anterior) hasta que marcas una casilla.
+- Quitar una fila la quita de la lista de todos los setups.
+- Los `.max` guardados antes no cambian al abrirlos: sus listas se juntan solo en pantalla.
+
 ## 2.0.0 · 2026-11-13
 
 Primera versión publicada de **OpenScene**.
