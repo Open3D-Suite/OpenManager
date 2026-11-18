@@ -706,11 +706,34 @@ fn oscn_renderView =
 
 -- ---------------------------------------------------------------- saved setups
 
--- Files saved before 2.0.0 keep their setups, their maps and the environment mix maps under the old keys below. They
--- are read like ours, and moved to the keys above the first time the file is saved with this version.
-global oscn_oldDat = "PuzlesSM_Dat"
-global oscn_oldMaps = "PuzlesSM_Maps"
-global oscn_oldMix = "PZSM_EnvMix"
+-- Files saved before 2.0.0 keep their setups, their maps and the environment mix maps under one of the old keys below
+-- (newest first). They are read like ours, and moved to the keys above the first time the file is saved with this version.
+global oscn_oldDat = #("PuzlesSM_Dat", "DrawfieldSM_Dat")
+global oscn_oldMaps = #("PuzlesSM_Maps", "DrawfieldSM_Maps")
+global oscn_oldMix = #("PZSM_EnvMix", "DFSM_EnvMix")
+
+fn oscn_readKey key =
+(
+	if (isProperty rootNode key) then ((getProperty rootNode key) as string) else ""
+)
+
+-- the setups of such a file, as text ("" when it has none)
+fn oscn_readOldSetups =
+(
+	for k in oscn_oldDat do
+	(
+		local t = oscn_readKey (k as name)
+		if (t != "") do return t
+	)
+	""
+)
+
+fn oscn_hasLegacy =
+(
+	local found = false
+	for k in (oscn_oldDat + oscn_oldMaps) where (isProperty rootNode (k as name)) do found = true
+	found
+)
 
 -- the environment mix maps of such a file take the current name, so they are used again instead of made anew
 fn oscn_renameOldMixMaps =
@@ -718,23 +741,25 @@ fn oscn_renameOldMixMaps =
 	local c = undefined
 	try (c = execute "CoronaMix") catch()
 	if (c != undefined) do
-		for m in (getClassInstances c) where (matchPattern m.name pattern:(oscn_oldMix + "*")) do
-			m.name = "OSCN_EnvMix" + (substring m.name (oscn_oldMix.count + 1) -1)
+		for m in (getClassInstances c) do
+			for old in oscn_oldMix where (matchPattern m.name pattern:(old + "*")) do
+				m.name = "OSCN_EnvMix" + (substring m.name (old.count + 1) -1)
 	true
 )
 
 fn oscn_dropLegacy =
 (
-	local datKey = oscn_oldDat as name
-	local mapsKey = oscn_oldMaps as name
-	if (isProperty rootNode mapsKey) do
+	for k in oscn_oldMaps where (isProperty rootNode (k as name)) do
 	(
-		try (for m in (getProperty rootNode mapsKey) where (m != undefined) do oscn_keepMap m) catch()
+		try (for m in (getProperty rootNode (k as name)) where (m != undefined) do oscn_keepMap m) catch()
 	)
 	for i = (custAttributes.count rootNode) to 1 by -1 do
 	(
 		local ca = custAttributes.get rootNode i
-		if (ca != undefined and ((isProperty ca datKey) or (isProperty ca mapsKey))) do custAttributes.delete rootNode i
+		local old = false
+		if (ca != undefined) do
+			for k in (oscn_oldDat + oscn_oldMaps) where (isProperty ca (k as name)) do old = true
+		if old do custAttributes.delete rootNode i
 	)
 	true
 )
@@ -747,17 +772,12 @@ fn oscn_saveSetups data =
 		rootNode.OpenScene_Dat = data
 		setSaveRequired true
 	)
-	if ((isProperty rootNode (oscn_oldDat as name)) or (isProperty rootNode (oscn_oldMaps as name))) do
+	if (oscn_hasLegacy()) do
 	(
 		oscn_dropLegacy()
 		setSaveRequired true
 	)
 	true
-)
-
-fn oscn_readKey key =
-(
-	if (isProperty rootNode key) then ((getProperty rootNode key) as string) else ""
 )
 
 -- ---------------------------------------------------------------- cameras

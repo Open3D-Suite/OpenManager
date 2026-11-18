@@ -14,9 +14,9 @@ fn oscn_startupCheck =
 			if (f != undefined) do (wanted = ((readLine f) != "0"); close f)
 		)
 		-- Once the file has setups of OpenScene nothing is asked: they always win over the other ones, which are never
-		-- read again. (The second key holds setups of OpenScene saved before 2.0.0, converted on the next save.)
+		-- read again. (The other keys hold setups saved before 2.0.0, converted on the next save.)
 		local ours = false
-		for k in #(#OpenScene_Dat, #PuzlesSM_Dat) where (isProperty rootNode k) do
+		for k in #(#OpenScene_Dat, #PuzlesSM_Dat, #DrawfieldSM_Dat) where (isProperty rootNode k) do
 			if (((getProperty rootNode k) as string).count > 60) do ours = true
 		local other = (isProperty rootNode #SceneManager_Dat) and (((getProperty rootNode #SceneManager_Dat) as string).count > 25)
 		if (wanted and other and not ours and oscn_isOpen != true and not (GetQuietMode()) and not (IsNetServer())) do

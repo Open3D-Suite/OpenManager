@@ -10,7 +10,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from . import cards, cards2, dialogs, icons, maxlink, model, widgets
 from .widgets import Blocker, Card, GridBoard, PRIMARY, TINTS, blend, icon, menu_tool, pal, text_color, tool
 
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 TITLE = "OpenScene"
 OBJECT_NAME = "OpenScene"
 TOP_ICON = 22

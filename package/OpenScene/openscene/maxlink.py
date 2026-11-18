@@ -672,13 +672,12 @@ def save_setups(text):
 
 
 def read_setups(first_id):
-    """Our own setups (also those saved before 2.0.0, under the old key), else the ones another scene manager saved
+    """Our own setups (also those saved before 2.0.0, under an old key), else the ones another scene manager saved
     in this file (converted, not changed)."""
     ours = model.decode(rt.oscn_readKey(rt.Name(DATA_KEY)))
     if ours is not None:
         return ours, "ours"
-    legacy_key = str(rt.oscn_oldDat or "")
-    old = model.decode(rt.oscn_readKey(rt.Name(legacy_key))) if legacy_key else None
+    old = model.decode(str(rt.oscn_readOldSetups()))
     if old is not None:
         rt.oscn_renameOldMixMaps()
         return old, "legacy"

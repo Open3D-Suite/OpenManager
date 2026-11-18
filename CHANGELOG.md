@@ -2,6 +2,11 @@
 
 Formato: una sección por versión, la más reciente arriba. Cada entrada dice qué cambia para quien usa la herramienta.
 
+## 2.1.1 · 2026-11-18
+
+- Los `.max` guardados con las primeras versiones de la herramienta (antes de la 1.4) también se abren con sus setups y
+  sus mezclas de entorno; al guardar pasan a la clave nueva. Antes solo se convertían los de la 1.4 a la 1.6.
+
 ## 2.1.0 · 2026-11-18
 
 - **Layers y Objects: una sola lista para todos los setups.** Las capas y objetos que añades en un setup (con "+" o con

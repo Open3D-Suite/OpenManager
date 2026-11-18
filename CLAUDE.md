@@ -5,9 +5,12 @@ both shipped with Max) plus a MAXScript library. Installed by dragging `OpenScen
 GitHub: `AdanCastellanos/OpenScene` (public, MIT, branch `main`).
 
 ## Talking to the user
-- Always reply in **English**, even when they write in Spanish.
+- Always reply in **Spanish** (castellano).
 - Repository docs (`README.md`, `AUDITORIA.md`, `CHANGELOG.md`) are in **Spanish**; code, comments, UI text and this
   file are in English.
+- The user's own 3ds Max 2026 user folder is `%LOCALAPPDATA%\Autodesk\3dsMax\2026 - 64bit\ENU` (settings in
+  `en-US\plugcfg`). It also holds files of other tools: when updating the install there, touch only OpenScene's files
+  and the ones of this tool's earlier installs.
 
 ## Layout
 | path | what |
@@ -21,8 +24,9 @@ GitHub: `AdanCastellanos/OpenScene` (public, MIT, branch `main`).
 ## Rules
 - **Never mention the tool's former names or the reference program it was inspired by**, in code, comments, UI, docs,
   commit messages or file names. Refer to it only as "another scene manager". The only allowed traces are the internal
-  keys that convert files saved before 2.0.0: the legacy block in `openscene_core.ms` (`oscn_oldDat`, `oscn_oldMaps`,
-  `oscn_oldMix`), the key list in `OpenScene_startup.ms` and `model.OLD_COMPRESSED_PREFIX`.
+  keys that convert files saved before 2.0.0: the legacy block in `openscene_core.ms` (the arrays `oscn_oldDat`, `oscn_oldMaps`,
+  `oscn_oldMix`, two generations of keys, read by `oscn_readOldSetups`), the key list in `OpenScene_startup.ms` and
+  `model.OLD_COMPRESSED_PREFIX`.
 - **Own work only**: property labels, ranges and defaults are written by us in `tools/props_source.py`. Never copy
   labels, texts, tables or UI wording from other software. Property *names* are the renderers' public API and must
   match exactly.
