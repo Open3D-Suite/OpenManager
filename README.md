@@ -7,13 +7,14 @@ Un **setup** guarda, para un mismo `.max`: cámara, resolución, frames, sol, do
 luces, xrefs, ruta de salida, ajustes de render, post-producción del VFB (Corona) y más. Al clicar un setup
 se aplica a la escena; el **Batch Render** (la tetera) renderiza todos los marcados.
 
-Versión **2.1.1** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
+Versión **2.2.0** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
 
 ## Instalar
 
 1. Descarga **`OpenScene.mzp`** y arrástralo a un visor de 3ds Max.
-2. *Customize > Customize User Interface > Toolbars*, **Group: Main UI**, **Category: OpenScene**:
-   arrastra **OpenScene** a una barra o un menú.
+2. El instalador pone el botón en una barra de herramientas nueva, **OpenScene**: arrástrala a donde quieras.
+   Si ya tenías el botón en alguna barra, no se añade otra. (También está en *Customize > Customize User Interface*,
+   **Group: Main UI**, **Category: OpenScene**, para ponerlo en otra barra o en un menú.)
 
 Para quitarlo: *Scripting > Run Script…* > `uninstall.ms` y reinicia Max. Los setups guardados en los
 `.max` no se tocan.

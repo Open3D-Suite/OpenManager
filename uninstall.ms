@@ -9,6 +9,39 @@
 	local osUnDelDir
 	fn osUnDelDir d = (if (doesDirectoryExist d) do try ((dotNetClass "System.IO.Directory").Delete (trimRight d "\\/") true) catch())
 
+	-- the "OpenScene" toolbar the installer made (a button the user put on a toolbar of their own is left alone)
+	local osUnToolbar
+	fn osUnToolbar =
+	(
+		try
+		(
+			cui.saveConfig()
+			local f = cui.getConfigFile()
+			if (f != undefined and (doesFileExist f)) do
+			(
+				local io = dotNetClass "System.IO.File"
+				local txt = io.ReadAllText f
+				local s = findString txt "<Window objectName=\"OpenScene\""
+				if (s != undefined) do
+				(
+					local rest = substring txt s -1
+					local e = findString rest "</Window>"
+					if (e != undefined) do
+					(
+						local stop = s + e - 1 + "</Window>".count
+						while (s > 1 and txt[s - 1] == " ") do s -= 1
+						while (stop <= txt.count and (txt[stop] == "\r" or txt[stop] == "\n")) do stop += 1
+						txt = (substring txt 1 (s - 1)) + (substring txt stop -1)
+						io.WriteAllText f txt (dotNetObject "System.Text.UTF8Encoding" true)
+						cui.loadConfig f
+					)
+				)
+			)
+		)
+		catch (format "OpenScene uninstaller: toolbar not removed: %\n" (getCurrentException()))
+	)
+	osUnToolbar()
+
 	local cfg = (getDir #plugcfg) + "\\"
 	local gone = #(
 		(getDir #userMacros) + "\\OpenScene.mcr",

@@ -2,6 +2,13 @@
 
 Formato: una sección por versión, la más reciente arriba. Cada entrada dice qué cambia para quien usa la herramienta.
 
+## 2.2.0 · 2026-11-18
+
+- **El instalador pone el botón en la barra de herramientas**: crea una barra **OpenScene** con el botón, lista para
+  arrastrarla a donde quieras. Si ya tienes el botón en alguna barra, no añade otra. Antes de tocar la interfaz guarda
+  una copia (`.cuix.before-openscene`) y, si algo falla, la vuelve a poner.
+- El desinstalador quita esa barra (las barras propias en las que hayas puesto el botón no se tocan).
+
 ## 2.1.1 · 2026-11-18
 
 - Los `.max` guardados con las primeras versiones de la herramienta (antes de la 1.4) también se abren con sus setups y

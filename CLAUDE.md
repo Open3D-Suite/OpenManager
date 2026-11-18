@@ -42,6 +42,14 @@ GitHub: `AdanCastellanos/OpenScene` (public, MIT, branch `main`).
 - Decided by the user: the scene state carries over from one setup to the next (no reset between setups), and Corona
   Interactive is not stopped when a setup is applied (setting `ipr_corona_restart`, off by default).
 
+## Toolbar button
+MAXScript has no call to add a button to a toolbar (menus have the 2025+ menu API, toolbars don't). `install.ms`
+(`osInstToolbar`) saves the interface (`cui.saveConfig`), adds a `<Window objectName="OpenScene" type="T">` with one
+`CTB_MACROBUTTON` (`actionTableID="647394"`, ``actionID="OpenScene`OpenScene"``) before `</CUIWindows>` in
+`cui.getConfigFile()`, backs the file up as `.cuix.before-openscene`, then `cui.loadConfig` + `cui.showToolbar`. It
+does nothing when any toolbar already has that actionID. `uninstall.ms` (`osUnToolbar`) removes only that Window.
+The `.cuix` is UTF-8 with BOM and CRLF; keep both.
+
 ## Working on it
 - Card logic can be tested with real Qt outside Max: a scratch venv with `PySide6-Essentials`, `QT_QPA_PLATFORM=offscreen`,
   stand-in `pymxs` / `qtmax` modules and a small fake window object (`settings`, `setups`, `active()`, `scene`,
