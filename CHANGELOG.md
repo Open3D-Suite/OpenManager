@@ -9,6 +9,7 @@ Formato: una sección por versión, la más reciente arriba. Cada entrada dice q
   importados de otros archivos, copias), OpenScene podía coger el Color Correct de un material en lugar del que está
   sobre el HDRI. Ahora elige siempre el que tiene el HDRI o el cielo debajo, y los ajustes del HDRI (rotación,
   archivo...) tampoco van a parar a un bitmap de un material con el mismo nombre.
+- El repositorio está ahora en `github.com/daniellopezcastellanos/OpenScene`.
 
 ## 2.2.0 · 2026-11-18
 

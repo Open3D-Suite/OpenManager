@@ -2,7 +2,8 @@
 
 Scene-setup and batch-render manager that runs inside 3ds Max 2025+: a Python / PySide6 window (`pymxs`, `qtmax`,
 both shipped with Max) plus a MAXScript library. Installed by dragging `OpenScene.mzp` onto a viewport.
-GitHub: `AdanCastellanos/OpenScene` (public, MIT, branch `main`).
+GitHub: `daniellopezcastellanos/OpenScene` (public, MIT, branch `main`). The account was renamed: links to the old
+username only work through GitHub's redirect, so always use this one.
 
 ## Talking to the user
 - Always reply in **Spanish** (castellano).
