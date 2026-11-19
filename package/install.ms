@@ -41,8 +41,8 @@
 				if ((findString txt "actionID=\"OpenScene`OpenScene\"") != undefined) then result = #already
 				else
 				(
-					local at = findString txt "</CUIWindows>"
-					if (at != undefined) do
+					local closeAt = findString txt "</CUIWindows>"
+					if (closeAt != undefined) do
 					(
 						local nl = if ((findString txt "\r\n") != undefined) then "\r\n" else "\n"
 						local win = "    <Window objectName=\"OpenScene\" name=\"OpenScene\" type=\"T\" cType=\"1\" toolbarRows=\"1\">" + nl
@@ -54,9 +54,9 @@
 						if (doesFileExist backup) do deleteFile backup
 						copyFile f backup
 						-- the block goes in front of the line that closes the list of windows
-						local lineStart = at
+						local lineStart = closeAt
 						while (lineStart > 1 and txt[lineStart - 1] == " ") do lineStart -= 1
-						txt = (substring txt 1 (lineStart - 1)) + "    " + win + (substring txt at -1)
+						txt = (substring txt 1 (lineStart - 1)) + "    " + win + (substring txt closeAt -1)
 						io.WriteAllText f txt (dotNetObject "System.Text.UTF8Encoding" true)
 						cui.loadConfig f
 						cui.showToolbar "OpenScene"

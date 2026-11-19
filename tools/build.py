@@ -111,6 +111,12 @@ def build_mzp():
 
 
 if __name__ == "__main__":
+    # a MAXScript mistake only shows when 3ds Max runs the file: never package one
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import check_ms
+    if check_ms.main():
+        sys.exit("not built: fix the MAXScript problems above first")
     build_icons()
     t = build_mzp()
     print("built %s (%d KB)" % (t, os.path.getsize(t) // 1024))

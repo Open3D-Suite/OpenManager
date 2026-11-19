@@ -2,6 +2,13 @@
 
 Formato: una sección por versión, la más reciente arriba. Cada entrada dice qué cambia para quien usa la herramienta.
 
+## 2.2.2 · 2026-11-19
+
+- **El instalador vuelve a funcionar**: el de la 2.2.0 y la 2.2.1 se paraba nada más arrastrarlo con el error
+  *"Syntax error: at at, expected name"* (usaba como nombre de variable una palabra que MAXScript tiene reservada) y no
+  instalaba nada. Si te salió ese error, arrastra el `OpenScene.mzp` nuevo y listo.
+- Antes de generar el `.mzp` se revisan los archivos MAXScript, para que un error así no vuelva a llegar a un paquete.
+
 ## 2.2.1 · 2026-11-19
 
 - **Entorno con un Color Correct encima del HDRI**: ya no sale un fondo de otro color (amarillo, por ejemplo) al

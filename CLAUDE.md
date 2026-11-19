@@ -62,6 +62,9 @@ The `.cuix` is UTF-8 with BOM and CRLF; keep both.
 - Nothing can be run inside 3ds Max from here. Check what can be checked: `py_compile` every module, load
   `model.py` / `external.py` standalone and test them, check that every `rt.oscn_*` used in Python is defined in the
   `.ms` files, and say clearly in the reply what still has to be tested in Max.
+- MAXScript reserved words can't be names: `local at = ...` broke the 2.2.0 installer on every machine ("expected
+  name"). Others to avoid: `in to by on off of with set max level about undo animate coordsys where collect`.
+  `tools/check_ms.py` finds them and bad string escapes; `tools/build.py` runs it and refuses to build if it fails.
 - **The Bash tool collapses `\\` to `\` even inside quoted heredocs.** Write or edit MAXScript files that contain
   backslashes with the Write / Edit tools, never through a shell heredoc, and check the string escapes afterwards
   (in MAXScript only `\\ \n \t \r \"` are valid).

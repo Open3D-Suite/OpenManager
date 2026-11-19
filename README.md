@@ -7,7 +7,7 @@ Un **setup** guarda, para un mismo `.max`: cámara, resolución, frames, sol, do
 luces, xrefs, ruta de salida, ajustes de render, post-producción del VFB (Corona) y más. Al clicar un setup
 se aplica a la escena; el **Batch Render** (la tetera) renderiza todos los marcados.
 
-Versión **2.2.1** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
+Versión **2.2.2** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
 
 ## Instalar
 
@@ -45,7 +45,9 @@ Cada ajuste se elige en el **Selector de propiedades** y tiene un lápiz para to
 python tools/build.py
 ```
 
-Python 3 normal, sin dependencias. Dibuja los iconos (`package/icons/`) y rehace `OpenScene.mzp`.
+Python 3 normal, sin dependencias. Primero revisa los archivos MAXScript (`tools/check_ms.py`: palabras reservadas
+usadas como nombres y caracteres de escape no válidos, errores que 3ds Max solo muestra al ejecutar el script) y, si
+están bien, dibuja los iconos (`package/icons/`) y rehace `OpenScene.mzp`.
 `python tools/make_props.py` regenera `props.json` (la tabla del Selector de propiedades) desde `tools/props_source.py`:
 ahí están, para cada motor, los ajustes que ofrece cada tarjeta, con sus nombres, rangos y valores por defecto.
 
@@ -65,7 +67,7 @@ Para probar cambios sin reinstalar: copia `package/OpenScene/` sobre la instalad
 | `package/OpenScene/openscene_core.ms` | funciones MAXScript que leen y cambian la escena |
 | `package/OpenScene/OpenScene_startup.ms` | aviso al abrir un `.max` con setups de otro gestor, para convertirlos |
 | `package/OpenScene/openscene/` | la ventana (Python): `window.py`, tarjetas en `cards.py` / `cards2.py`, `maxlink.py` (setup → cambios en Max), `model.py` (datos, sin Max ni Qt), `external.py` (lee los setups de otro gestor, opcional) |
-| `tools/` | `build.py` (genera el .mzp), `props_source.py` + `make_props.py` (generan `props.json`) |
+| `tools/` | `build.py` (genera el .mzp), `check_ms.py` (revisa los MAXScript), `props_source.py` + `make_props.py` (generan `props.json`) |
 
 ## Si algo falla
 
