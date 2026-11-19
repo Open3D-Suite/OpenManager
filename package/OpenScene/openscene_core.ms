@@ -149,11 +149,13 @@ fn oscn_editorMaps =
 
 -- maps the Environment card knows about, as #(maps, offered). Offered in the list: skies, bitmaps with an .hdr, and
 -- colour corrections / selects with such a bitmap linked below. The others (.exr) are kept so a setup using one still works.
+global oscn_skyClasses = #("CoronaSky", "VRaySky", "FStormSky", "Physical_Sun___Sky_Environment", "RS_Physical_Sky")
+
 fn oscn_envMaps =
 (
 	local found = #()
 	local offer = #()
-	local skies = #("CoronaSky", "VRaySky", "FStormSky", "Physical_Sun___Sky_Environment", "RS_Physical_Sky")
+	local skies = oscn_skyClasses
 	local wanted = #("CoronaBitmap", "VRayHDRI", "VRayBitmap", "FStormBitmap", "Bitmaptexture", "RS_Bitmap", "CoronaColorCorrect", "Color_Correction", "FStormColorCorrection", "CoronaSelect")
 	for n in skies do
 	(
@@ -189,13 +191,35 @@ fn oscn_envMaps =
 	#(found, offer)
 )
 
+-- the map of this class with this name. Names are often shared (maps named after their class, models merged from
+-- other files, copies), and a Color Correct of a material must never take the place of the one over the HDRI: when
+-- several have the name, the one that looks like an environment wins (a sky, or an HDRI in it), then the one in the
+-- environment slot now (or linked below it), then one the tool keeps.
 fn oscn_findMap cls nm =
 (
 	local c = undefined
 	try (c = execute cls) catch()
 	if (c == undefined) do return undefined
-	try (for m in (getClassInstances c) do (if (m.name == nm) do return m)) catch()
-	undefined
+	local same = #()
+	try (for m in (getClassInstances c) where (m.name == nm) do append same m) catch()
+	if (same.count == 0) do return undefined
+	if (same.count == 1) do return same[1]
+	local inEnv = #()
+	if (environmentMap != undefined) do oscn_chainInto environmentMap inEnv
+	try (local t = renderers.current.environment_texture; if (t != undefined) do oscn_chainInto t inEnv) catch()
+	local kept = #()
+	try (for k in rootNode.OpenScene_Maps where (k != undefined) do oscn_chainInto k kept) catch()
+	local best = same[1]
+	local bestScore = -1
+	for m in same do
+	(
+		local score = 0
+		if ((findItem oscn_skyClasses ((classof m) as string)) > 0 or (oscn_hdrLevel m) > 0) do score += 4
+		if ((findItem inEnv m) > 0) do score += 2
+		if ((findItem kept m) > 0) do score += 1
+		if (score > bestScore) do (best = m; bestScore = score)
+	)
+	best
 )
 
 fn oscn_isDome l =

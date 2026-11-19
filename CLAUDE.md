@@ -39,6 +39,10 @@ GitHub: `AdanCastellanos/OpenScene` (public, MIT, branch `main`).
   values in its own `set`. Adding a row copies it to every setup (`cards.share_rows`, with the scene's current
   values), removing deletes it from all, new setups get the whole list (`window.share_lists`). A row a setup
   doesn't have yet is shown half ticked and is not applied; ticking it creates the entry from the scene.
+- Environment maps (and the maps linked below them) are found by class + name (`oscn_findMap`). Names are not
+  unique in real scenes (maps named after their class, merged models, copies), so when several share one, it picks the
+  map with a sky or HDRI in it, then the one in the environment slot (or below it), then one in `OpenScene_Maps`.
+  Never go back to "first instance with that name": it put a material's Color Correct in the environment.
 - Decided by the user: the scene state carries over from one setup to the next (no reset between setups), and Corona
   Interactive is not stopped when a setup is applied (setting `ipr_corona_restart`, off by default).
 

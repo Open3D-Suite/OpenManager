@@ -2,6 +2,14 @@
 
 Formato: una sección por versión, la más reciente arriba. Cada entrada dice qué cambia para quien usa la herramienta.
 
+## 2.2.1 · 2026-11-19
+
+- **Entorno con un Color Correct encima del HDRI**: ya no sale un fondo de otro color (amarillo, por ejemplo) al
+  elegirlo en OpenScene. Cuando varios mapas tienen el mismo nombre (mapas que se llaman como su clase, modelos
+  importados de otros archivos, copias), OpenScene podía coger el Color Correct de un material en lugar del que está
+  sobre el HDRI. Ahora elige siempre el que tiene el HDRI o el cielo debajo, y los ajustes del HDRI (rotación,
+  archivo...) tampoco van a parar a un bitmap de un material con el mismo nombre.
+
 ## 2.2.0 · 2026-11-18
 
 - **El instalador pone el botón en la barra de herramientas**: crea una barra **OpenScene** con el botón, lista para
