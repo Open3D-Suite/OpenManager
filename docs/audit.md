@@ -37,10 +37,11 @@ tried in 3ds Max before a release. What touches MAXScript and the window can onl
    the interface.
 3. **One call per change.** 2000 layers × 4 properties = 8000 pymxs calls when a setup is applied (about 0.5 to 1 s).
    They could go in one MAXScript call.
-4. **`oscn_findMap` / `oscn_findTexmap` go through `getClassInstances`** for each change of a map. With thousands of
-   CoronaBitmaps, each environment setting is a full pass.
-5. **`oscn_envMaps` goes through every instance** of 10 bitmap / colour-correction classes at each read of the scene.
-   It is what weighs most in scenes with thousands of textures.
+4. **Every read of the scene walks the maps once** (`oscn_allMaps`: materials, environment, editors, the settings of
+   the renderer, cameras and lights). Much faster than a pass per class, but it still grows with the number of
+   materials and lights. A map nothing points to is found the slow way, once.
+5. **IDs are stamped when the setups are saved**: a node merged before its setups were ever saved is found by its
+   name only, and only when one node has it.
 6. **No undo**: a setup is applied with undo off. Ctrl+Z does not take it back.
 7. **Render elements renamed with the output only with Corona, Redshift and FStorm** (`name_element.ext`). V-Ray's
    separate channels (VRayRawImage / *Separate render channels*) are not touched.

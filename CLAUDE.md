@@ -89,8 +89,14 @@ Update it in the same commit as a change that makes it old.
   is checked (`model.is_plain_name`, `oscn_classNamed`, never `execute`); stored text goes through `model.decode` /
   `model.read_preset`, which refuse a newer `FORMAT_VERSION`. A new place that turns text into code must be added to
   `tests/test_security.py` with its reason.
-- Maps are found by class + name (`oscn_findMap`); names repeat, so the one with an HDRI or sky in it wins, then the
-  one in the environment slot, then one in `OpenScene_Maps`.
+- Maps are found by class + name (`oscn_findMap`, through `oscn_mapsNamed` and the cache that every scene read makes
+  again from `oscn_allMaps`); names repeat, so the one with an HDRI or sky in it wins, then the one in the
+  environment slot, then one in `OpenScene_Maps`.
+- Nodes and layers a setup uses carry a lasting ID in their app data (slot `oscn_uidSlot`, "OSID"; never another
+  tool's), stamped when the setups are saved (`window.stamp_uids`) and followed by ID, then handle, then name
+  (`oscn_resolveNodes`, `model.apply_resolved`, `model.follow_layer_renames`).
+- Code ported from OpenManager (GPL-3.0-or-later, Carles Llavata) is rewritten here and listed in `NOTICE`; add to
+  it what is ported next. Never bring its property tables or anything that names the reference program.
 - Layers and Objects show one list for all setups (`model.shared_rows`, `cards.share_rows`, `window.share_lists`);
   each setup keeps its own values. Decided by the author: the scene state carries over between setups, and Corona
   Interactive is not stopped when a setup is applied (`ipr_corona_restart`, off by default).

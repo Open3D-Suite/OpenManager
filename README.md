@@ -89,7 +89,8 @@ Known limits are in [docs/audit.md](docs/audit.md). Post-Production / VFB works 
 Copyright (C) 2026 Daniel Castellanos and OpenScene contributors.
 
 OpenScene is free software under the GNU General Public License, version 3 or later (`GPL-3.0-or-later`). See
-[`LICENSE`](LICENSE). Versions up to 2.2.2 were published under the MIT licence; copies of those keep it.
+[`LICENSE`](LICENSE). Versions up to 2.2.2 were published under the MIT licence; copies of those keep it. Parts
+ported from OpenManager, by Carles Llavata, keep their credit in [`NOTICE`](NOTICE).
 
 OpenScene is an independent project, not affiliated with, sponsored or endorsed by Autodesk, Chaos or any other
 maker. 3ds Max is a trademark of Autodesk, Inc.; Corona and V-Ray are trademarks of Chaos Software; FStorm, Redshift,
