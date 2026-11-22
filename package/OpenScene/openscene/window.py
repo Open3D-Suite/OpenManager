@@ -735,8 +735,7 @@ class SceneManager(QtWidgets.QDockWidget):
             self.last_saved = None
         elif source == "legacy":
             self.last_saved = None  # saved again under the new name with the file
-        for s in self.setups:
-            maxlink.resolve(s, self.scene)
+        self.resolve_scene_refs()
         self.active_id = None
         self.last_sent = []
         self.loading = False
@@ -745,6 +744,54 @@ class SceneManager(QtWidgets.QDockWidget):
         self.rebuild_rows()
         self.refresh_cards()
         self.update_status()
+
+    # ------------------------------------------------------------ lasting references to nodes and layers
+    def resolve_all(self, setups=None, strict=False):
+        """Finds again the nodes and layers the setups use after a merge, a rename or another file (by lasting ID,
+        then handle, then name: model.apply_resolved). strict: setups just imported, whose stored handles belong to
+        another file. Returns True when a reference changed."""
+        setups = self.setups if setups is None else setups
+        changed = False
+        try:
+            changed = model.apply_resolved(setups, maxlink.resolve_nodes(model.resolve_query(setups)), strict=strict)
+            changed = model.follow_layer_renames(setups, maxlink.layer_uids()) or changed
+        except maxlink.MAX_ERRORS:
+            traceback.print_exc()
+        if changed:
+            self.save_timer.start()
+        return changed
+
+    def resolve_scene_refs(self):
+        """resolve_all after a scene read; when a node moved (a merge), the scene is read again, so it lists the
+        objects at their new handles."""
+        if self.resolve_all():
+            try:
+                raw = maxlink.read_scene_raw(self.object_handles())
+                self.scene = maxlink.Scene(maxlink.parse_scene(raw))
+                self._scene_raw = raw
+            except maxlink.MAX_ERRORS:
+                traceback.print_exc()
+
+    def stamp_uids(self):
+        """Gives a lasting ID to every node and layer a setup started to use (kept in their app data)."""
+        refs = [r for s in self.setups for r in model.node_refs(s) if r.get("handle") is not None and not r.get("uid")]
+        lights = [(s, h) for s in self.setups for h in s["lights"]["set"] if not model.light_uids(s).get(str(h))]
+        uids = maxlink.stamp_nodes([r["handle"] for r in refs] + [h for _, h in lights])
+        for r, u in zip(refs, uids, strict=False):
+            if u:
+                r["uid"] = u
+        for (s, h), u in zip(lights, uids[len(refs) :], strict=False):
+            if u:
+                model.light_uids(s)[str(h)] = u
+        layers = [
+            ref
+            for s in self.setups
+            for ref in model.layer_refs(s)
+            if not model.layer_ref_get(ref)[1] and isinstance(model.layer_ref_get(ref)[0], str)
+        ]
+        for ref, u in zip(layers, maxlink.stamp_layers([model.layer_ref_get(ref)[0] for ref in layers]), strict=False):
+            if u:
+                model.layer_ref_set(ref, uid=u)
 
     def object_handles(self):
         """Every object some setup uses: only these are read from the scene (not all of a big scene's objects)."""
@@ -774,8 +821,7 @@ class SceneManager(QtWidgets.QDockWidget):
             traceback.print_exc()
             return
         self._texmaps = None
-        for s in self.setups:
-            maxlink.resolve(s, self.scene)
+        self.resolve_scene_refs()
         self.layout_cards()
         self.refresh_rows()
         self.refresh_cards()
@@ -1073,7 +1119,7 @@ class SceneManager(QtWidgets.QDockWidget):
         s = self.active()
         if s is None:
             return
-        maxlink.resolve(s, self.scene)
+        self.resolve_all([s])
         self.last_sent = []
         self.query_values()
         self.apply_timer.stop()
@@ -1656,7 +1702,7 @@ class SceneManager(QtWidgets.QDockWidget):
             return
         for s in lst:
             s["id"] = self._new_id()
-            maxlink.resolve(s, self.scene)
+            self.resolve_all([s], strict=True)
             self.setups.append(s)
         self.rebuild_rows()
         self.changed(apply=False)
@@ -2059,6 +2105,10 @@ class SceneManager(QtWidgets.QDockWidget):
             return  # another file is being opened; its own setups will be read
         if getattr(self, "stored_problem", None):
             return  # the file's setups were not read whole: never written over
+        try:
+            self.stamp_uids()
+        except maxlink.MAX_ERRORS:
+            traceback.print_exc()
         text = self.encoded()
         if text == self.last_saved:
             return

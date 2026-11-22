@@ -23,6 +23,13 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
   run. Render Override, Post-Production and LightMix settings take only plain property names and plain values.
 - **Setups saved by a newer OpenScene are refused, not guessed at**: they stay in the file as they are, and what you
   change is not saved over them. So do setups that are damaged or bigger than OpenScene reads.
+- **Setups keep their objects and layers through renames and merges.** Every camera, sun, dome, light, object and
+  layer a setup uses gets an ID of its own, stored with it in the scene when the setups are saved, so OpenScene finds
+  it again: a renamed layer stays in the Layers and Variants cards (before, it was lost), a renamed object keeps
+  working, and nodes merged into another file, which get new handles there, are found by their ID, Lights card
+  settings included. A handle that now belongs to another object is never used: an imported setup could otherwise
+  change whatever object had the same handle in the new file. A deleted object stays in its setups and is found again
+  if it comes back. Setups saved before get their IDs the next time the file is saved.
 - **Faster with many maps.** The maps are found by walking from what holds them (the materials, the environment, the
   Material Editors and the texture-map settings of the renderer, cameras and lights), once, instead of going through
   the whole scene once for each kind of map; and a setup looks its maps up in a list made at each read of the scene.

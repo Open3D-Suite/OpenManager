@@ -452,6 +452,108 @@ fn oscn_scene objHandles:#() =
         + "],\"objects\":" + objs + ",\"xrefs\":[" + (oscn_join xr) + "]}"
 )
 
+-- ---------------------------------------------------------------- lasting IDs of the nodes and layers setups use
+
+-- A merge gives nodes new handles and a rename changes names: every node and layer a setup uses gets an ID of its
+-- own in its app data, which travels with it (save, merge, rename). Ported from OpenManager (Carles Llavata),
+-- GPL-3.0-or-later. The slot is OpenScene's own ("OSID"), so another tool's IDs are never read as these.
+global oscn_uidSlot = 1330858308
+
+fn oscn_uidOf obj = (local u = undefined; try (u = getAppData obj oscn_uidSlot) catch(); if (u == undefined) then "" else (u as string))
+
+-- every node that has an ID, as uid -> the nodes with it (two, when a file was merged twice)
+fn oscn_uidIndex =
+(
+    local d = Dictionary #string
+    for o in objects do
+    (
+        local u = oscn_uidOf o
+        if (u != "") do (if (HasDictValue d u) then append (GetDictValue d u) o else PutDictValue d u #(o))
+    )
+    d
+)
+
+-- the ID of each of these nodes, made for one that has none or shares it with another node; "" for a missing node
+fn oscn_stampNodes handles =
+(
+    local index = undefined
+    for h in handles collect
+    (
+        local n = maxOps.getNodeByHandle h
+        if (n == undefined) then ""
+        else
+        (
+            if (index == undefined) do index = oscn_uidIndex()
+            local u = oscn_uidOf n
+            if (u == "" or ((HasDictValue index u) and (GetDictValue index u).count > 1)) do
+            (
+                u = genGuid()
+                setAppData n oscn_uidSlot u
+                PutDictValue index u #(n)
+            )
+            u
+        )
+    )
+)
+
+fn oscn_stampLayers names =
+(
+    for nm in names collect
+    (
+        local ly = LayerManager.getLayerFromName nm
+        if (ly == undefined) then ""
+        else
+        (
+            local r = ly.layerAsRefTarg
+            if ((oscn_uidOf r) == "") do setAppData r oscn_uidSlot (genGuid())
+            oscn_uidOf r
+        )
+    )
+)
+
+-- where the nodes of these references are now: refs #(#(handle, uid, name), ...) -> #(#(handle, name), ...). The node
+-- at the stored handle is kept when it has the same ID (or the reference has none yet); else the node with that ID;
+-- else the only node with that name. -2: the stored handle is another node now; -1: not in the scene.
+fn oscn_resolveNodes refs =
+(
+    local index = undefined
+    for r in refs collect
+    (
+        local h = r[1]
+        local uid = r[2]
+        local nm = r[3]
+        local n = if (h != undefined and h >= 0) then (maxOps.getNodeByHandle h) else undefined
+        local found = undefined
+        if (n != undefined and (uid == "" or (oscn_uidOf n) == uid)) do found = n
+        if (found == undefined and uid != "") do
+        (
+            if (index == undefined) do index = oscn_uidIndex()
+            if (HasDictValue index uid) do found = (GetDictValue index uid)[1]
+        )
+        if (found == undefined and nm != "") do
+        (
+            local same = getNodeByName nm all:true
+            if (same.count == 1) do found = same[1]
+        )
+        if (found != undefined) then #(found.inode.handle, found.name)
+        else if (n != undefined) then #(-2, nm)
+        else #(-1, nm)
+    )
+)
+
+-- every layer that has an ID, as "uid|name" lines
+fn oscn_layerUids =
+(
+    local ss = stringStream ""
+    for i = 0 to (LayerManager.count - 1) do
+    (
+        local ly = LayerManager.getLayer i
+        local u = oscn_uidOf ly.layerAsRefTarg
+        if (u != "") do format "%|%\n" u ly.name to:ss
+    )
+    ss as string
+)
+
 -- ---------------------------------------------------------------- reading and writing properties
 
 global oscn_setPath

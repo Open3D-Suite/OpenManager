@@ -673,7 +673,14 @@ def _is_text(e, key):
 # the lists of rows a setup keeps: key -> (a row as the card makes it, what a row cannot do without)
 _ROWS = {
     "layers": (lambda: layer_entry(""), lambda e: _is_text(e, "name")),
-    "objects": (lambda: object_entry(0, ""), lambda e: isinstance(e.get("handle"), int)),
+    # a row whose node is another node now has no handle until it is found again by its ID or name
+    "objects": (
+        lambda: object_entry(None, ""),
+        lambda e: (
+            (isinstance(e.get("handle"), int) and not isinstance(e.get("handle"), bool))
+            or (e.get("handle") is None and (_is_text(e, "uid") or _is_text(e, "name")))
+        ),
+    ),
     "atmosphere": (lambda: {"name": "", "active": True}, lambda e: _is_text(e, "name")),
     "elements": (lambda: {"name": "", "enabled": True}, lambda e: _is_text(e, "name")),
     "variants": (lambda: {"name": "", "value": 1, "layers": []}, lambda e: True),
@@ -705,6 +712,140 @@ def shared_rows(setups, key, field):
                 seen.add(k)
                 out.append(e)
     return out
+
+
+# ---------------------------------------------------------------- lasting references to nodes and layers
+#
+# A setup points at nodes by handle (camera, suns, dome, the rows of the Objects card, the Lights card) and at layers
+# by name. A merge gives nodes new handles and a rename changes names, so every reference also keeps a lasting ID
+# ("uid", which OpenScene writes in the node's or the layer's app data: oscn_stampNodes / oscn_stampLayers) and the
+# name. The scene is asked where each reference is now (oscn_resolveNodes): by ID, then by handle, then by name.
+# Ported from OpenManager (Carles Llavata), GPL-3.0-or-later.
+
+
+def node_refs(s):
+    """The dicts of a setup that point at a node, each with "handle", "name" and maybe "uid": camera, suns, dome and
+    the rows of the Objects card, in that order."""
+    return [s["camera"]] + entries(s["sun"]) + [s["dome"]] + list(s["objects"]["set"])
+
+
+def light_uids(s):
+    """{str(handle): uid} of the Lights card, which keeps plain handles."""
+    if not isinstance(s["lights"].get("uids"), dict):
+        s["lights"]["uids"] = {}
+    return s["lights"]["uids"]
+
+
+def _text(v):
+    return v if isinstance(v, str) else ""
+
+
+def resolve_query(setups):
+    """[handle or -1, uid, name] of every node reference of these setups: node_refs, then the Lights card."""
+    q = []
+    for s in setups:
+        for r in node_refs(s):
+            h = r.get("handle")
+            q.append(
+                [h if isinstance(h, int) and not isinstance(h, bool) else -1, _text(r.get("uid")), _text(r.get("name"))]
+            )
+        uids = light_uids(s)
+        for h in s["lights"]["set"]:
+            q.append([h, _text(uids.get(str(h))), ""])
+    return q
+
+
+def rekey_light(s, old, new):
+    """A light of the Lights card has another handle now: its place in the list, its settings and its ID follow it."""
+    s["lights"]["set"] = [new if h == old else h for h in s["lights"]["set"]]
+    props = s["props"]
+    prefix = "26|%s|" % old
+    for k in [k for k in props if k.startswith(prefix)]:
+        props["26|%s|%s" % (new, k[len(prefix) :])] = props.pop(k)
+    uids = light_uids(s)
+    if str(old) in uids:
+        uids[str(new)] = uids.pop(str(old))
+
+
+def drop_light(s, h):
+    s["lights"]["set"] = [x for x in s["lights"]["set"] if x != h]
+    for k in [k for k in s["props"] if k.startswith("26|%s|" % h)]:
+        del s["props"][k]
+    light_uids(s).pop(str(h), None)
+
+
+def apply_resolved(setups, results, strict=False):
+    """Moves the node references of `setups` to where the scene found them, results being (handle, name) for each
+    entry of resolve_query, in its order. Handle -1: not in the scene now (left as it is: it may come back). -2: the
+    stored handle is another node now (setups made in another file): the reference stops using it; with strict
+    (setups just imported), a light of the Lights card is taken off. Returns True when something changed."""
+    found = iter(results)
+    changed = False
+    for s in setups:
+        for r in node_refs(s):
+            h, name = next(found)
+            if h >= 0:
+                if r.get("handle") != h or (name and r.get("name") != name):
+                    changed = True
+                r["handle"] = h
+                if name:
+                    r["name"] = name
+            elif h == -2 and r.get("handle") is not None:
+                r["handle"] = None
+                changed = True
+        for old in list(s["lights"]["set"]):
+            h, _ = next(found)
+            if h >= 0 and h != old:
+                rekey_light(s, old, h)
+                changed = True
+            elif h == -2 and strict:
+                drop_light(s, old)
+                changed = True
+    return changed
+
+
+def layer_refs(s):
+    """[(entry, index)] of a setup's layer names: the rows of the Layers card ({"name", "uid"}, index None) and the
+    layers of each set of the Variants card (names in "layers", IDs in a "uids" list beside it)."""
+    out = [(e, None) for e in s["layers"]["set"]]
+    for vs in s["variants"]["set"]:
+        names = vs["layers"]
+        uids = vs["uids"] if isinstance(vs.get("uids"), list) else []
+        vs["uids"] = [_text(u) for u in uids[: len(names)]] + [""] * max(0, len(names) - len(uids))
+        out += [(vs, i) for i in range(len(names))]
+    return out
+
+
+def layer_ref_get(ref):
+    e, i = ref
+    return (e.get("name"), _text(e.get("uid"))) if i is None else (e["layers"][i], e["uids"][i])
+
+
+def layer_ref_set(ref, name=None, uid=None):
+    e, i = ref
+    if i is None:
+        if name is not None:
+            e["name"] = name
+        if uid is not None:
+            e["uid"] = uid
+    else:
+        if name is not None:
+            e["layers"][i] = name
+        if uid is not None:
+            e["uids"][i] = uid
+
+
+def follow_layer_renames(setups, names_by_uid):
+    """A layer renamed in the scene keeps its place in the setups: {uid: name now} of the scene's layers. Returns
+    True when a name changed."""
+    changed = False
+    for s in setups:
+        for ref in layer_refs(s):
+            name, uid = layer_ref_get(ref)
+            if uid and uid in names_by_uid and names_by_uid[uid] != name:
+                layer_ref_set(ref, name=names_by_uid[uid])
+                changed = True
+    return changed
 
 
 def ratio(w, h):

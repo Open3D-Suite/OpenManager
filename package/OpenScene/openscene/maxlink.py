@@ -123,20 +123,30 @@ def nodes_info(handles):
     return json.loads(str(rt.oscn_nodesInfo([int(h) for h in handles])), strict=False)
 
 
-def resolve(setup, scene):
-    """Handles change when a scene is merged or nodes are re-created: fall back to the stored name."""
-    for key, items in (("camera", scene.cameras), ("sun", scene.lights), ("dome", scene.lights)):
-        for c in model.entries(setup[key]):
-            h = c.get("handle")
-            found = None
-            if h is not None:
-                found = next((x for x in items if x["handle"] == h), None)
-            if found is None and c.get("name"):
-                found = scene.find_by_name(items, c["name"])
-                if found is not None:
-                    c["handle"] = found["handle"]
-            if found is not None:
-                c["name"] = found["name"]
+def resolve_nodes(query):
+    """Where the referenced nodes are now (oscn_resolveNodes): [(handle, name)]; -1 missing, -2 another node."""
+    if not query:
+        return []
+    return [(int(r[0]), str(r[1])) for r in rt.oscn_resolveNodes(query)]
+
+
+def stamp_nodes(handles):
+    """The lasting ID of each of these nodes, made when one has none; "" for a missing node."""
+    return [str(u) for u in rt.oscn_stampNodes([int(h) for h in handles])] if handles else []
+
+
+def stamp_layers(names):
+    return [str(u) for u in rt.oscn_stampLayers(list(names))] if names else []
+
+
+def layer_uids():
+    """{uid: name now} of every layer that has an ID."""
+    out = {}
+    for line in str(rt.oscn_layerUids()).splitlines():
+        uid, _, name = line.partition("|")
+        if uid:
+            out[uid] = name
+    return out
 
 
 # ---------------------------------------------------------------- values
@@ -539,6 +549,8 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
                 out.append(("layer", layer["name"], n, bool(v)))
     if s["objects"]["enabled"]:
         for o in s["objects"]["set"]:
+            if o.get("handle") is None:
+                continue  # its node is not found in this scene (yet)
             for _, p in enabled(23):
                 if p["class"] != "BooleanClass":
                     continue
