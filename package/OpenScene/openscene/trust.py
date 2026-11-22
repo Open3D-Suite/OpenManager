@@ -138,8 +138,15 @@ def question(pending):
     lines = ["• %s: %s" % (it.title, it.preview) for it in pending[:12]]
     if len(pending) > 12:
         lines.append("• ...and %d more" % (len(pending) - 12))
+    presets = any(it.title == "Render preset" for it in pending)
     return (
         "The setups of this file run scripts or render presets that were not written or chosen in OpenScene on this "
         "computer:\n\n%s\n\nA script can do anything 3ds Max can do. Run them only if you trust where this file comes "
-        "from.\n\nRun them?" % "\n".join(lines)
+        "from.%s\n\nRun them?"
+        % (
+            "\n".join(lines),
+            " A render preset brings render settings only: the scripts of Render Setup are left as they are."
+            if presets
+            else "",
+        )
     )

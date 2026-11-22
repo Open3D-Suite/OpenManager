@@ -54,6 +54,11 @@ fn oscn_classNamed nm kind =
     if (not (oscn_isPlainName nm)) do return undefined
     local want = toLower nm
     for c in kind.classes where ((toLower (c as string)) == want) do return c
+    -- an older name 3ds Max keeps for a class (VRayHDRI for VRayBitmap): what it holds under that name is read as it
+    -- is, nothing is run, and it counts only when it is a class of that kind
+    local g = undefined
+    try (if (globalVars.isGlobal (nm as name)) do g = globalVars.get (nm as name)) catch()
+    if (g != undefined and (try ((classOf g) == kind) catch false)) do return g
     undefined
 )
 
@@ -965,6 +970,22 @@ fn oscn_setElement nm onOff =
         local e = re.GetRenderElement i
         if (e.elementName == nm and e.enabled != onOff) do e.enabled = onOff
     )
+    true
+)
+
+-- Render Setup's own scripts (Common > Scripts: a file run before each render, one after it, each with its switch).
+-- A render preset keeps them too, so loading one could set a script for the next render: maxlink.load_preset reads
+-- them before the load and writes them back after it.
+fn oscn_renderSetupScripts = #(usePreRendScript, preRendScript, usePostRendScript, postRendScript)
+
+fn oscn_setRenderSetupScripts v =
+(
+    if (usePreRendScript != (v[1] == true)) do usePreRendScript = (v[1] == true)
+    local pre = if (v[2] == undefined) then "" else (v[2] as string)
+    if (preRendScript != pre) do preRendScript = pre
+    if (usePostRendScript != (v[3] == true)) do usePostRendScript = (v[3] == true)
+    local post = if (v[4] == undefined) then "" else (v[4] as string)
+    if (postRendScript != post) do postRendScript = post
     true
 )
 

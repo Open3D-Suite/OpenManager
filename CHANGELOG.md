@@ -23,8 +23,18 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
   run. Render Override, Post-Production and LightMix settings take only plain property names and plain values.
 - **Setups saved by a newer OpenScene are refused, not guessed at**: they stay in the file as they are, and what you
   change is not saved over them. So do setups that are damaged or bigger than OpenScene reads.
-- A value of the wrong kind in a stored setup gets its default instead of breaking the window, and a repeated setup id
-  gets a new one.
+- **A render preset no longer brings the scripts of Render Setup.** A `.rps` file also keeps Render Setup's pre- and
+  post-render scripts (*Common > Scripts*), so a preset could set a script that runs at the next render. When
+  OpenScene loads a preset, those scripts are left as they were, also when the load fails.
+- **Enter always answers No** in the question about scripts and presets, wherever the focus is; Yes takes a click or
+  Space on its button.
+- **Bake Setups asks once, before it starts**, about the scripts and presets of the setups it applies, as Batch Render
+  does, instead of in the middle of the run.
+- **A variant decides whether its layers are on**, also after an edit of the Layers card, which before could turn a
+  layer of a variant on or off against it until the setup was clicked again.
+- Maps saved under a class's older name (V-Ray's `VRayHDRI`, now `VRayBitmap`) are found again.
+- A value of the wrong kind in a stored setup gets its default instead of breaking the window, a row of a list that is
+  not a row is left out, and a repeated setup id gets a new one.
 - **Render Output takes only absolute paths** (a drive or a network share) without `..` and without characters
   Windows refuses: a relative path, or one that steps up, is shown in orange and the render is not saved there.
 - **Preset files (`.osp`, `.smp`) are read with the same checks**: one saved by a newer OpenScene, too big or broken is

@@ -1017,16 +1017,7 @@ class SceneManager(QtWidgets.QDockWidget):
             it for it in trust.items(acts) if it.digest and it.digest not in known and it.digest not in self.refused
         ]
         if pending and ask:
-            box = QtWidgets.QMessageBox(
-                QtWidgets.QMessageBox.Warning,
-                TITLE,
-                trust.question(pending),
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
-                self,
-            )
-            box.setDefaultButton(QtWidgets.QMessageBox.No)
-            box.setEscapeButton(QtWidgets.QMessageBox.No)
-            if box.exec() == QtWidgets.QMessageBox.Yes:
+            if dialogs.ask_safely(self, TITLE, trust.question(pending)):
                 self.trust(it.digest for it in pending)
                 known = self.trusted_digests()
             else:
@@ -1736,6 +1727,8 @@ class SceneManager(QtWidgets.QDockWidget):
             return 0
         self.rendering = True
         keep = self.active_id
+        # what the run would run is asked about once, before it starts, as for a Batch Render
+        self.review([a for s in setups for a in self.actions_for(s, False)])
         dlg = dialogs.BatchDialog(self, len(setups), title, task)
         cancel = {"on": False}
         dlg.cancel.clicked.connect(lambda: cancel.update(on=True))
@@ -1751,7 +1744,7 @@ class SceneManager(QtWidgets.QDockWidget):
                     len(setups),
                 )
                 QtWidgets.QApplication.processEvents()
-                self.run_actions(self.actions_for(s, False))
+                self.run_actions(self.actions_for(s, False), ask=False)
                 step(s, self.index_of(s))
                 done += 1
                 dlg.set_job("", done, len(setups))

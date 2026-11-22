@@ -510,12 +510,20 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
         if output_path and rendering:
             out.append(("mkdir", output_path))
         out.append(("output", output_path))
+    va = s.get("variants", {})
+    # a variant decides whether its layers are on, so the Layers card leaves that out for them: with both, an edit of
+    # the Layers card alone would be the only new change the window sends, and it would win over the variant
+    by_variant = set()
+    if va.get("enabled"):
+        by_variant = {n for vs in va.get("set", []) for n in vs.get("layers", []) if isinstance(n, str)}
     if s["layers"]["enabled"]:
         for layer in s["layers"]["set"]:
             for _, p in enabled(14):
                 if p["class"] != "BooleanClass":
                     continue
                 n = p["name"]
+                if n == "on" and layer["name"] in by_variant:
+                    continue
                 if n == "on":
                     v = layer["visible"]
                 elif n == "isfrozen":
@@ -557,12 +565,12 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
     if at.get("enabled"):
         for a in at.get("set", []):
             out.append(("atmos", a["name"], bool(a.get("active", True))))
-    va = s.get("variants", {})
     if va.get("enabled"):
         for vs in va.get("set", []):
             pick = int(vs.get("value", 1))
             for i, name in enumerate(vs.get("layers", [])):
-                out.append(("layer", name, "on", i + 1 == pick))
+                if isinstance(name, str):
+                    out.append(("layer", name, "on", i + 1 == pick))
     el = s.get("elements", {})
     if el.get("enabled"):
         for x in el.get("set", []):
@@ -678,7 +686,7 @@ def _run_one(a):
     elif k == "element":
         rt.oscn_setElement(a[1], a[2])
     elif k == "preset":
-        rt.oscn_loadPreset(a[1])
+        load_preset(a[1])
     elif k == "post":
         if a[1]:
             path = os.path.join(tempfile.gettempdir(), "oscn_post.conf")
@@ -774,6 +782,36 @@ def rs_snapshot():
 
 def save_preset(path):
     return bool(rt.oscn_savePreset(path))
+
+
+def _same_scripts(a, b):
+    """Render Setup's scripts compared as Windows compares paths: the two switches and the two files."""
+
+    def plain(v):
+        return [
+            bool(v[0]),
+            os.path.normcase(os.path.normpath(str(v[1] or ""))),
+            bool(v[2]),
+            os.path.normcase(os.path.normpath(str(v[3] or ""))),
+        ]
+
+    return plain(a) == plain(b)
+
+
+def load_preset(path):
+    """The one place where OpenScene loads a render preset. A preset brings render settings only: Render Setup's own
+    pre- and post-render scripts, which a .rps file keeps too, are read before the load and put back after it,
+    whatever the preset holds and also when the load fails."""
+    kept = list(rt.oscn_renderSetupScripts())
+    try:
+        return bool(rt.oscn_loadPreset(path))
+    finally:
+        rt.oscn_setRenderSetupScripts(kept)
+        if not _same_scripts(list(rt.oscn_renderSetupScripts()), kept):
+            print(
+                "OpenScene: Render Setup's scripts could not be put back after loading %s: check Render Setup > "
+                "Common > Scripts before rendering" % path
+            )
 
 
 def run_code(code):

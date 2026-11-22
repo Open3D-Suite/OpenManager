@@ -3,12 +3,14 @@
 at and added, with the reason it is safe. And the names a setup read from a file carries are checked before they
 reach 3ds Max (maxlink.actions, with a small stand-in for pymxs)."""
 
+import json
 import re
 import subprocess
-import sys
-import types
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import stand_in  # noqa: E402 - tests/ is on the path (tests/run.py)
 
 REPO = Path(__file__).absolute().parent.parent
 
@@ -73,16 +75,9 @@ class Doors(unittest.TestCase):
         self.assertIn("fn oscn_classNamed", core)
 
 
-class FakeRuntime(types.SimpleNamespace):
-    def __getattr__(self, name):
-        return None
-
-
 def load_maxlink():
     """maxlink with a stand-in for pymxs: enough to build the list of changes of a setup."""
-    fake = types.ModuleType("pymxs")
-    fake.runtime = FakeRuntime()
-    sys.modules.setdefault("pymxs", fake)
+    stand_in.install()
     from openscene import maxlink
 
     return maxlink
@@ -120,6 +115,77 @@ class FileNames(unittest.TestCase):
     def test_a_tone_mapping_operator_class_that_is_not_one_is_not_made(self):
         self.assertIsNone(self.maxlink.new_operator('Box()); deleteFile "x"; (Box'))
         self.assertIsNone(self.maxlink.new_operator("Teapot"))
+
+    def test_a_variant_decides_whether_its_layers_are_on(self):
+        # the window sends only the changes that are new: an edit of the Layers card alone must not win over a variant
+        s = self.model.empty_setup(1)
+        s["layers"] = {"enabled": True, "set": [self.model.layer_entry("Sofa_A"), self.model.layer_entry("Walls")]}
+        s["variants"] = {"enabled": True, "set": [{"name": "Sofa", "value": 2, "layers": ["Sofa_A", "Sofa_B"]}]}
+        on_row = [({"v_class": "Layer"}, {"name": "on", "class": "BooleanClass"})]
+        acts = self.maxlink.actions(s, self.maxlink.Scene(), lambda card: on_row if card == 14 else [], None, False)
+        sets = [a for a in acts if a[0] == "layer" and a[2] == "on"]
+        self.assertEqual(
+            sets, [("layer", "Walls", "on", True), ("layer", "Sofa_A", "on", False), ("layer", "Sofa_B", "on", True)]
+        )
+
+    def test_rows_of_a_file_that_are_not_rows_never_break_a_setup(self):
+        # as read from a file: through model.decode, which keeps only rows of the right shape
+        stored = {
+            "id": 1,
+            "variants": {"enabled": True, "set": [{"layers": [{"x": 1}, "A"]}, "junk"]},
+            "layers": {"enabled": True, "set": [5, {"name": "Walls"}, {"visible": True}]},
+            "objects": {"enabled": True, "set": [{"handle": "x"}, {"handle": 7}]},
+            "lights": {"enabled": True, "set": [3, "x", True]},
+        }
+        s = self.model.decode(json.dumps({"version": 1, "setups": [stored]}))["setups"][0]
+        self.assertEqual([x["name"] for x in s["layers"]["set"]], ["Walls"])
+        self.assertEqual([x["handle"] for x in s["objects"]["set"]], [7])
+        self.assertEqual(s["lights"]["set"], [3])
+        acts = self.maxlink.actions(s, self.maxlink.Scene(), lambda card: [], None, False)
+        self.assertIn(("layer", "A", "on", False), acts)  # the variant picks its first entry, which is not a name
+
+    def test_a_render_preset_never_changes_the_scripts_of_render_setup(self):
+        # a .rps file keeps Render Setup's pre- and post-render scripts too: loading one must not set them
+        maxlink = self.maxlink
+
+        class Max:
+            scripts = [False, "", False, ""]
+
+            def oscn_renderSetupScripts(self):
+                return list(self.scripts)
+
+            def oscn_setRenderSetupScripts(self, v):
+                self.scripts = list(v)
+
+            def oscn_loadPreset(self, path):
+                self.scripts = [True, "D:/someone/else.ms", True, "D:/someone/after.ms"]
+                return True
+
+        fake = Max()
+        with mock.patch.object(maxlink, "rt", fake):
+            self.assertTrue(maxlink.load_preset("D:/look.rps"))
+        self.assertEqual(fake.scripts, [False, "", False, ""])
+
+    def test_render_setup_scripts_are_put_back_when_the_load_fails(self):
+        maxlink = self.maxlink
+
+        class Max:
+            scripts = [True, "D:/mine.ms", False, ""]
+
+            def oscn_renderSetupScripts(self):
+                return list(self.scripts)
+
+            def oscn_setRenderSetupScripts(self, v):
+                self.scripts = list(v)
+
+            def oscn_loadPreset(self, path):
+                self.scripts = [False, "", True, "D:/other.ms"]
+                raise RuntimeError("MAXScript exception")
+
+        fake = Max()
+        with mock.patch.object(maxlink, "rt", fake), self.assertRaises(RuntimeError):
+            maxlink.load_preset("D:/look.rps")
+        self.assertEqual(fake.scripts, [True, "D:/mine.ms", False, ""])
 
     def test_scripts_of_a_setup_become_actions_that_review_can_take_out(self):
         s = self.model.empty_setup(1)

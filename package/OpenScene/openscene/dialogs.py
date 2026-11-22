@@ -70,6 +70,35 @@ DEFAULT_COLUMNS = {
 }
 
 
+class _EnterSaysNo(QtCore.QObject):
+    """Enter and Return on any button of a question press its No, so they never say yes by accident."""
+
+    def __init__(self, box, no):
+        super().__init__(box)
+        self.no = no
+
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt's name
+        if event.type() == QtCore.QEvent.KeyPress and event.key() in (QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter):
+            self.no.click()
+            return True
+        return False
+
+
+def ask_safely(parent, title, text):
+    """A yes / no question whose safe answer is No: Enter, Escape and the window's X say No wherever the focus is;
+    Yes takes a click, or Space on its button. Returns True for Yes."""
+    box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, title, text, QtWidgets.QMessageBox.NoButton, parent)
+    yes = box.addButton(QtWidgets.QMessageBox.Yes)
+    no = box.addButton(QtWidgets.QMessageBox.No)
+    box.setDefaultButton(no)
+    box.setEscapeButton(no)
+    guard = _EnterSaysNo(box, no)
+    for b in (yes, no, box):
+        b.installEventFilter(guard)
+    box.exec()
+    return box.clickedButton() is yes
+
+
 class BatchDialog(Dialog):
     def __init__(self, parent, total, title="Batch Render", task="Rendering"):
         super(BatchDialog, self).__init__(parent)

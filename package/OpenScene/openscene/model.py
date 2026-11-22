@@ -651,7 +651,33 @@ def normalize(s, sid=None):
             for k2, v2 in v.items():
                 if k2 not in s[k] or not _same_kind(v2, s[k][k2]):
                     s[k][k2] = copy.deepcopy(v2)
+    for key, (template, needs) in _ROWS.items():
+        s[key]["set"] = [_row(e, template()) for e in s[key]["set"] if isinstance(e, dict) and needs(e)]
+    s["lights"]["set"] = [h for h in s["lights"]["set"] if isinstance(h, int) and not isinstance(h, bool)]
+    s["xref"]["set"] = [x for x in s["xref"]["set"] if isinstance(x, str)]
     return s
+
+
+def _row(e, template):
+    """A row of a card's list with every key of its template, each of the right kind."""
+    for k, v in template.items():
+        if k not in e or not _same_kind(v, e[k]):
+            e[k] = v
+    return e
+
+
+def _is_text(e, key):
+    return isinstance(e.get(key), str)
+
+
+# the lists of rows a setup keeps: key -> (a row as the card makes it, what a row cannot do without)
+_ROWS = {
+    "layers": (lambda: layer_entry(""), lambda e: _is_text(e, "name")),
+    "objects": (lambda: object_entry(0, ""), lambda e: isinstance(e.get("handle"), int)),
+    "atmosphere": (lambda: {"name": "", "active": True}, lambda e: _is_text(e, "name")),
+    "elements": (lambda: {"name": "", "enabled": True}, lambda e: _is_text(e, "name")),
+    "variants": (lambda: {"name": "", "value": 1, "layers": []}, lambda e: True),
+}
 
 
 def layer_entry(name, visible=True, freeze=False, render=True, vcam=True):
