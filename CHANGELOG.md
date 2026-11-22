@@ -61,6 +61,7 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
   Windows refuses: a relative path, or one that steps up, is shown in orange and the render is not saved there.
 - **Preset files (`.osp`, `.smp`) are read with the same checks**: one saved by a newer OpenScene, too big or broken is
   refused and the reason is said; an output preset sets only the settings of the Render Output card.
+- The repository is now at `github.com/Open3D-Suite/OpenScene`, with the other apps of the suite.
 - The licence is now the GNU General Public License, version 3 or later. Versions up to 2.2.2 keep the MIT licence.
 - Settings are written whole into a new file that then takes the old one's place, so a crash never leaves them half
   written.
