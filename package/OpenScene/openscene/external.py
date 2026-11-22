@@ -4,12 +4,24 @@ on the root node, base64 JSON), converted to OpenScene setups. Only reads that d
 Nothing else depends on this module: deleting it (with its two uses in maxlink.read_setups and the check in
 OpenScene_startup.ms) removes the feature.
 """
+
 import base64
 import json
 import re
 
-from .model import (DEFAULT_HEIGHT, DEFAULT_RATIO, DEFAULT_WIDTH, MAX_SETUPS, MAX_STORED, empty_setup, from_max,
-                    layer_entry, new_token, normalize, object_entry)
+from .model import (
+    DEFAULT_HEIGHT,
+    DEFAULT_RATIO,
+    DEFAULT_WIDTH,
+    MAX_SETUPS,
+    MAX_STORED,
+    empty_setup,
+    from_max,
+    layer_entry,
+    new_token,
+    normalize,
+    object_entry,
+)
 
 KEY = "SceneManager_Dat"
 
@@ -78,23 +90,37 @@ def convert(data, first_id):
         s["scenename"] = g("scenename").get("text") or ""
         s["status"] = v.get("status") or "#WIP"
         cam = g("camera")
-        s["camera"].update(enabled=_b(cam.get("enabled"), True), handle=_h(cam.get("handle")), locked=_b(cam.get("locked"), False))
+        s["camera"].update(
+            enabled=_b(cam.get("enabled"), True), handle=_h(cam.get("handle")), locked=_b(cam.get("locked"), False)
+        )
         _props_into(1, cam.get("props"), s["props"])
         r = g("resolution")
-        s["resolution"].update(enabled=_b(r.get("enabled"), True), width=int(_n(r.get("width"), DEFAULT_WIDTH)),
-                               height=int(_n(r.get("height"), DEFAULT_HEIGHT)), ratio=_n(r.get("ratio"), DEFAULT_RATIO),
-                               locked=_b(r.get("locked"), False))
+        s["resolution"].update(
+            enabled=_b(r.get("enabled"), True),
+            width=int(_n(r.get("width"), DEFAULT_WIDTH)),
+            height=int(_n(r.get("height"), DEFAULT_HEIGHT)),
+            ratio=_n(r.get("ratio"), DEFAULT_RATIO),
+            locked=_b(r.get("locked"), False),
+        )
         for key, card in (("sun", 3), ("dome", 4)):
             x = g(key)
             s[key].update(enabled=_b(x.get("enabled"), False), handle=_h(x.get("handle")))
             _props_into(card, x.get("props"), s["props"])
         e = g("environment")
         mat = e.get("mat") or {}
-        s["environment"].update(enabled=_b(e.get("enabled"), False), cls=mat.get("class") or "", name=mat.get("name") or "")
+        s["environment"].update(
+            enabled=_b(e.get("enabled"), False), cls=mat.get("class") or "", name=mat.get("name") or ""
+        )
         _props_into(6, e.get("props"), s["props"])
         f = g("frames")
-        s["frames"].update(enabled=_b(f.get("enabled"), False), kind=int(_n(f.get("type"), 0)), single=int(_n(f.get("single"), 0)),
-                           start=int(_n(f.get("start"), 0)), end=int(_n(f.get("end"), 100)), nth=int(_n(f.get("nth"), 1)))
+        s["frames"].update(
+            enabled=_b(f.get("enabled"), False),
+            kind=int(_n(f.get("type"), 0)),
+            single=int(_n(f.get("single"), 0)),
+            start=int(_n(f.get("start"), 0)),
+            end=int(_n(f.get("end"), 100)),
+            nth=int(_n(f.get("nth"), 1)),
+        )
         if isinstance(f.get("list"), str):
             s["frames"]["list"] = f["list"]
         s["layers"]["enabled"] = _b(g("layers").get("enabled"), False)
@@ -105,7 +131,9 @@ def convert(data, first_id):
                 n = p.get("name")
                 if b is None or n == "name":
                     continue
-                key = {"on": "visible", "isfrozen": "freeze", "renderable": "render", "primaryVisibility": "vcam"}.get(n)
+                key = {"on": "visible", "isfrozen": "freeze", "renderable": "render", "primaryVisibility": "vcam"}.get(
+                    n
+                )
                 if key:
                     ent[key] = b
                 else:

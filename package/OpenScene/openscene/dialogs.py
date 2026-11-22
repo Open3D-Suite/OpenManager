@@ -1,4 +1,5 @@
 """Dialogs: Batch Render progress, Property Selector, Settings (the gear) and Bake Setups."""
+
 from PySide6 import QtCore, QtWidgets
 
 from . import model
@@ -13,12 +14,18 @@ class Dialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None):
         super(Dialog, self).__init__(parent)
-        self.setWindowFlags(QtCore.Qt.Dialog | QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowSystemMenuHint | QtCore.Qt.WindowCloseButtonHint)
+        self.setWindowFlags(
+            QtCore.Qt.Dialog
+            | QtCore.Qt.WindowTitleHint
+            | QtCore.Qt.WindowSystemMenuHint
+            | QtCore.Qt.WindowCloseButtonHint
+        )
 
     def nativeEvent(self, event_type, message):
         try:
             if event_type == b"windows_generic_MSG" or bytes(event_type) == b"windows_generic_MSG":
                 import ctypes.wintypes
+
                 msg = ctypes.wintypes.MSG.from_address(int(message))
                 if msg.message == WM_CLOSE or (msg.message == WM_SYSCOMMAND and (msg.wParam & 0xFFF0) == SC_CLOSE):
                     QtCore.QTimer.singleShot(0, self.close_from_title_bar)
@@ -30,15 +37,36 @@ class Dialog(QtWidgets.QDialog):
     def close_from_title_bar(self):
         self.reject()
 
+
 DEFAULT_SETTINGS_MAX = {
-    "viewport_update_type": 0, "viewport_refresh": True, "ipr_corona_restart": False, "ipr_vray_resolution": True,
-    "update_time_output_type": False, "animate_camera": False,
+    "viewport_update_type": 0,
+    "viewport_refresh": True,
+    "ipr_corona_restart": False,
+    "ipr_vray_resolution": True,
+    "update_time_output_type": False,
+    "animate_camera": False,
 }
 DEFAULT_THEME = {"main": "auto", "header": "colored"}
-COLUMNS = [("name", "Scene Name"), ("camera", "Camera"), ("resolution", "Resolution"), ("sun", "Sun"),
-           ("dome", "Dome"), ("environment", "Environment"), ("frame", "Frame"), ("id", "Id")]
-DEFAULT_COLUMNS = {"name": True, "camera": True, "resolution": True, "sun": True, "dome": False,
-                   "environment": True, "frame": False, "id": False}
+COLUMNS = [
+    ("name", "Scene Name"),
+    ("camera", "Camera"),
+    ("resolution", "Resolution"),
+    ("sun", "Sun"),
+    ("dome", "Dome"),
+    ("environment", "Environment"),
+    ("frame", "Frame"),
+    ("id", "Id"),
+]
+DEFAULT_COLUMNS = {
+    "name": True,
+    "camera": True,
+    "resolution": True,
+    "sun": True,
+    "dome": False,
+    "environment": True,
+    "frame": False,
+    "id": False,
+}
 
 
 class BatchDialog(Dialog):
@@ -206,9 +234,13 @@ class SettingsDialog(Dialog):
         vl = QtWidgets.QVBoxLayout(vw)
         vl.setContentsMargins(0, 0, 0, 0)
         self.vp_group = QtWidgets.QButtonGroup(self)
-        for i, t in enumerate(["Switch the currently Active Viewport",
-                               "Only switch if the Active Viewport is Perspective, Camera or Orthographic",
-                               "Switch to the locked View to Render, based on the Render Settings Dialog"]):
+        for i, t in enumerate(
+            [
+                "Switch the currently Active Viewport",
+                "Only switch if the Active Viewport is Perspective, Camera or Orthographic",
+                "Switch to the locked View to Render, based on the Render Settings Dialog",
+            ]
+        ):
             r = QtWidgets.QRadioButton(t)
             self.vp_group.addButton(r, i)
             vl.addWidget(r)
@@ -285,12 +317,19 @@ class SettingsDialog(Dialog):
                 pres.append([int(parts[0]), int(parts[1])])
         return {
             "notify": self.notify.isChecked(),
-            "theme": {"main": ["auto", "light", "dark"][self.main.currentIndex()],
-                      "header": "colored" if self.header.currentIndex() == 0 else "default",
-                      "icons": ["small", "medium", "large"][self.icon_size.currentIndex()]},
-            "max": {"viewport_update_type": self.vp_group.checkedId(), "viewport_refresh": self.redraw.isChecked(),
-                    "ipr_corona_restart": self.ipr_corona.isChecked(), "ipr_vray_resolution": self.ipr_vray.isChecked(),
-                    "update_time_output_type": self.time_type.isChecked(), "animate_camera": False},
+            "theme": {
+                "main": ["auto", "light", "dark"][self.main.currentIndex()],
+                "header": "colored" if self.header.currentIndex() == 0 else "default",
+                "icons": ["small", "medium", "large"][self.icon_size.currentIndex()],
+            },
+            "max": {
+                "viewport_update_type": self.vp_group.checkedId(),
+                "viewport_refresh": self.redraw.isChecked(),
+                "ipr_corona_restart": self.ipr_corona.isChecked(),
+                "ipr_vray_resolution": self.ipr_vray.isChecked(),
+                "update_time_output_type": self.time_type.isChecked(),
+                "animate_camera": False,
+            },
             "columns_visible": {k: cb.isChecked() for k, cb in self.col_boxes.items()},
             "resolution_presets": pres or [list(x) for x in model.RESOLUTION_PRESETS],
         }
@@ -298,10 +337,13 @@ class SettingsDialog(Dialog):
 
 class BakeDialog(Dialog):
     """Bake Setups: turn the setups into something that renders without the window."""
-    METHODS = ["Convert to 3ds Max Batch Render (scene state + view per setup)",
-               "Export 3ds Max (.max), one file per setup",
-               "Export Corona Scene (.scn), one file per setup",
-               "Run Custom MAXScript on every setup"]
+
+    METHODS = [
+        "Convert to 3ds Max Batch Render (scene state + view per setup)",
+        "Export 3ds Max (.max), one file per setup",
+        "Export Corona Scene (.scn), one file per setup",
+        "Run Custom MAXScript on every setup",
+    ]
 
     def __init__(self, parent, setups, folder):
         super(BakeDialog, self).__init__(parent)
@@ -349,14 +391,16 @@ class BakeDialog(Dialog):
     def _method(self, i):
         self.code.setVisible(i == 3)
         self.folder.setEnabled(i in (1, 2))
-        self.note.setText([
-            "A scene state and a render preset are made for each setup and added to Rendering > Batch Render, "
-            "so the setups can go to Backburner or any render farm. Atmosphere, Background, Scripts, Xref, "
-            "object transforms and Corona LightMix can't be carried over this way.",
-            "Each setup is applied and the scene is saved as a copy. This can take a while on big files.",
-            "Each setup is applied and exported with Corona's own scene export.",
-            "Each setup is applied, then your script runs.",
-        ][i])
+        self.note.setText(
+            [
+                "A scene state and a render preset are made for each setup and added to Rendering > Batch Render, "
+                "so the setups can go to Backburner or any render farm. Atmosphere, Background, Scripts, Xref, "
+                "object transforms and Corona LightMix can't be carried over this way.",
+                "Each setup is applied and the scene is saved as a copy. This can take a while on big files.",
+                "Each setup is applied and exported with Corona's own scene export.",
+                "Each setup is applied, then your script runs.",
+            ][i]
+        )
 
     def _browse(self):
         d = QtWidgets.QFileDialog.getExistingDirectory(self, "Folder", self.folder.text())
@@ -364,5 +408,8 @@ class BakeDialog(Dialog):
             self.folder.setText(d.replace("\\", "/"))
 
     def chosen(self):
-        return [self.list.item(i).data(QtCore.Qt.UserRole) for i in range(self.list.count())
-                if self.list.item(i).checkState() == QtCore.Qt.Checked]
+        return [
+            self.list.item(i).data(QtCore.Qt.UserRole)
+            for i in range(self.list.count())
+            if self.list.item(i).checkState() == QtCore.Qt.Checked
+        ]

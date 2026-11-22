@@ -389,7 +389,16 @@ TABLES = {
         I("progressive_minSamples", "Progressive min", "Progressive: min subdivs", 1, 100, 1, on=True),
         I("progressive_maxSamples", "Progressive max", "Progressive: max subdivs", 1, 1000, 100, on=True),
         F("progressive_noise_threshold", "Progressive noise", "Progressive: noise limit", 0, 1, 0.01, 0.001, on=True),
-        F("progressive_max_render_time", "Progressive time", "Progressive: time limit (minutes, 0 = none)", 0, 1440, 0, 0.5, on=True),
+        F(
+            "progressive_max_render_time",
+            "Progressive time",
+            "Progressive: time limit (minutes, 0 = none)",
+            0,
+            1440,
+            0,
+            0.5,
+            on=True,
+        ),
         I("twoLevel_baseSubdivs", "Bucket min", "Bucket: min subdivs", 1, 100, 1),
         I("twoLevel_fineSubdivs", "Bucket max", "Bucket: max subdivs", 1, 100, 24),
         F("twoLevel_threshold", "Bucket noise", "Bucket: noise limit", 0, 1, 0.01, 0.001),
@@ -528,7 +537,13 @@ TABLES["corona_cam_overrides"] = [
     I("bokehBladeCount", "Blades", "Aperture blades", 3, 12, 6),
     F("bokehRotation", "Blade rotation", "Aperture blade rotation (degrees)", 0, 360, 0, 1),
     F("shutterAngle", "Shutter angle", "Shutter angle (degrees)", 0, 360, 180, 1),
-    I("projection", "Projection", "Projection (0 perspective, 1 cylindrical, 2 spherical, 3 VR, 4 fisheye, 5 ortho)", 0, 5),
+    I(
+        "projection",
+        "Projection",
+        "Projection (0 perspective, 1 cylindrical, 2 spherical, 3 VR, 4 fisheye, 5 ortho)",
+        0,
+        5,
+    ),
 ]
 
 # a few more Corona render settings

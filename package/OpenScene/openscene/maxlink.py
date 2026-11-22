@@ -1,4 +1,5 @@
 """Everything that talks to 3ds Max: reading the scene, applying a setup, storing setups, rendering."""
+
 import json
 import os
 import tempfile
@@ -22,6 +23,7 @@ def _none(v):
 
 
 # ---------------------------------------------------------------- scene
+
 
 class Scene(object):
     def __init__(self, data=None):
@@ -134,6 +136,7 @@ def resolve(setup, scene):
 
 # ---------------------------------------------------------------- values
 
+
 def _value(prop, v):
     """Stored value -> what the change list carries (hashable). Colors, maps and tone-mapping
     chains travel as tagged tuples and become 3ds Max objects only when applied."""
@@ -181,6 +184,7 @@ def _to_max(v):
 
 
 # ---------------------------------------------------------------- tone-mapping chains (Corona colour mapping operators)
+
 
 def read_pipeline(obj, prop):
     """The chain of operators in obj.prop as a list of {"class", "props"} (texture inputs are left out)."""
@@ -264,6 +268,7 @@ def write_pipeline(obj, prop, chain):
 
 # ---------------------------------------------------------------- Post-Production / VFB (Corona)
 
+
 def _live_operators():
     ops = []
     op = rt.getProperty(rt.renderers.current, "colorMap_pipeline")
@@ -288,7 +293,12 @@ def read_post(key, only_active=False):
         return {"ops": ops}
     if key == "lightmix":
         arrays = {}
-        for name in ("colorMap_lightmixIntensities", "colorMap_lightmixColors", "colorMap_lightmixEnabledLayers", "colormap_lightselect_elementNames"):
+        for name in (
+            "colorMap_lightmixIntensities",
+            "colorMap_lightmixColors",
+            "colorMap_lightmixEnabledLayers",
+            "colormap_lightselect_elementNames",
+        ):
             try:
                 vals = list(rt.getProperty(r, name) or [])
             except Exception:
@@ -308,7 +318,11 @@ def read_post(key, only_active=False):
         if not (isinstance(v, str) and v == "<none>"):
             props[n] = v
     if only_active:
-        switches = [n for n in names if isinstance(props.get(n), bool) and n.endswith(("_enabled", "_enable", "_on", "_blendEnabled"))]
+        switches = [
+            n
+            for n in names
+            if isinstance(props.get(n), bool) and n.endswith(("_enabled", "_enable", "_on", "_blendEnabled"))
+        ]
         if not any(props.get(n) for n in switches):
             return None
     return {"props": props} if props else None
@@ -357,6 +371,7 @@ def apply_lightmix(arrays):
 
 # ---------------------------------------------------------------- what a setup does
 
+
 def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=None, refused=None):
     """The list of changes a setup makes, in order. `enabled(card)` gives the ticked (tab, prop) pairs.
     opts: settings of the window (viewport mode, time output type...). What the setup carries that a setup may not
@@ -388,8 +403,18 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
                 refused.append("Render Override: %s" % (k,))
     f = s["frames"]
     if f["enabled"]:
-        out.append(("time", int(f["kind"]), int(f["single"]), int(f["start"]), int(f["end"]), max(1, int(f["nth"])),
-                    f["list"], bool(rendering or opts.get("update_time_output_type"))))
+        out.append(
+            (
+                "time",
+                int(f["kind"]),
+                int(f["single"]),
+                int(f["start"]),
+                int(f["end"]),
+                max(1, int(f["nth"])),
+                f["list"],
+                bool(rendering or opts.get("update_time_output_type")),
+            )
+        )
     if s["render_custom"]["enabled"]:
         for t, p in enabled(25):
             v = stored(25, t, p)
@@ -399,7 +424,9 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
         out.append(("renderview",))
     c = s["camera"]
     if c["enabled"] and c.get("handle") is not None:
-        out.append(("camera", c["handle"], bool(c["locked"]), 2 if rendering else int(opts.get("viewport_update_type", 0))))
+        out.append(
+            ("camera", c["handle"], bool(c["locked"]), 2 if rendering else int(opts.get("viewport_update_type", 0)))
+        )
         cam = scene.camera(c["handle"])
         cls = cam["class"] if cam else None
         for t, p in enabled(1):
@@ -414,8 +441,13 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
     if sun["enabled"]:
         suns = model.entries(sun)
         # the suns of the scene go in too: a sun added later is switched off as soon as the scene is read again
-        out.append(("sun", tuple(int(x["handle"]) for x in suns if x.get("handle") is not None),
-                    tuple(sorted(int(l["handle"]) for l in scene.suns()))))
+        out.append(
+            (
+                "sun",
+                tuple(int(x["handle"]) for x in suns if x.get("handle") is not None),
+                tuple(sorted(int(l["handle"]) for l in scene.suns())),
+            )
+        )
         for i, en in enumerate(suns):
             h = en.get("handle")
             if h is None:
@@ -430,8 +462,13 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
                         out.append(("node", h, model.light_prop(l, t, p), _value(p, v)))
     dome = s["dome"]
     if dome["enabled"]:
-        out.append(("dome", (int(dome["handle"]),) if dome.get("handle") is not None else (),
-                    tuple(sorted(int(l["handle"]) for l in scene.domes()))))
+        out.append(
+            (
+                "dome",
+                (int(dome["handle"]),) if dome.get("handle") is not None else (),
+                tuple(sorted(int(l["handle"]) for l in scene.domes())),
+            )
+        )
         if dome.get("handle") is not None:
             l = scene.light(dome["handle"])
             cls = l["class"] if l else None
@@ -696,6 +733,7 @@ def texmaps():
 
 # ---------------------------------------------------------------- storage inside the .max file
 
+
 def save_setups(text):
     rt.oscn_saveSetups(text)
 
@@ -719,6 +757,7 @@ def read_setups(first_id):
 
 
 # ---------------------------------------------------------------- module helpers
+
 
 def atmospherics():
     return json.loads(str(rt.oscn_atmospherics()))
@@ -787,6 +826,7 @@ def save_copy(path):
 
 # ---------------------------------------------------------------- misc
 
+
 def new_hdri(path):
     return json.loads(str(rt.oscn_newHdri(path)))
 
@@ -849,6 +889,7 @@ def watch(callback):
 def main_window():
     try:
         import qtmax
+
         return qtmax.GetQMaxMainWindow()
     except Exception:
         return None

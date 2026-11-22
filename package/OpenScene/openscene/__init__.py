@@ -19,6 +19,7 @@ _win = None
 def _set_open_flag(on):
     try:
         from pymxs import runtime as rt
+
         rt.oscn_isOpen = bool(on)
         rt.updateToolbarButtons()
     except Exception:
@@ -42,6 +43,7 @@ def _alive(w):
 
 def _place(w, main):
     from PySide6 import QtCore, QtWidgets
+
     st = w.settings
     if main is not None and isinstance(main, QtWidgets.QMainWindow):
         area = QtCore.Qt.DockWidgetArea(st.get("area", int(QtCore.Qt.RightDockWidgetArea.value)))
@@ -55,8 +57,13 @@ def _place(w, main):
         screen = (main.screen() if main is not None else None) or QtWidgets.QApplication.primaryScreen()
         avail = screen.availableGeometry()
         g = st.get("geometry")
-        if not (g and len(g) == 4 and g[2] >= 360 and g[3] >= 300
-                and avail.adjusted(-50, -50, 50, 50).contains(QtCore.QPoint(g[0] + 40, g[1] + 20))):
+        if not (
+            g
+            and len(g) == 4
+            and g[2] >= 360
+            and g[3] >= 300
+            and avail.adjusted(-50, -50, 50, 50).contains(QtCore.QPoint(g[0] + 40, g[1] + 20))
+        ):
             width = min(max(900, int(avail.width() * 0.32)), avail.width() - 40)
             height = min(max(1000, int(avail.height() * 0.8)), avail.height() - 60)
             g = [avail.x() + (avail.width() - width) // 2, avail.y() + (avail.height() - height) // 2, width, height]
@@ -76,6 +83,7 @@ def show():
         return _win
     try:
         from . import maxlink, window
+
         main = maxlink.main_window()
         _win = window.SceneManager(main)
         _place(_win, main)
@@ -85,8 +93,8 @@ def show():
         _win = None
         try:
             from pymxs import runtime as rt
-            rt.messageBox("OpenScene could not start.\nSee the MAXScript Listener for details.",
-                          title="OpenScene")
+
+            rt.messageBox("OpenScene could not start.\nSee the MAXScript Listener for details.", title="OpenScene")
         except Exception:
             pass
     return _win
@@ -113,4 +121,5 @@ def reload_package():
     for k in [k for k in sys.modules if k == __name__ or k.startswith(__name__ + ".")]:
         del sys.modules[k]
     import importlib
+
     return importlib.import_module(__name__).show()
