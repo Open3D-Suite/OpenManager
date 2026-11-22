@@ -26,7 +26,7 @@ def F(name, short, long=None, lo=None, hi=None, value=0.0, step=None, on=False):
     return _p("Float", name, short, long, lo, hi, value, step, on)
 
 
-def I(name, short, long=None, lo=None, hi=None, value=0, on=False):
+def INT(name, short, long=None, lo=None, hi=None, value=0, on=False):
     return _p("Integer", name, short, long, lo, hi, value, 1, on)
 
 
@@ -164,9 +164,9 @@ TABLES = {
         F("enviroFar", "Env far", "Environment range: far", 0, DIST, 1000),
     ],
     "fstorm_cam": [
-        I("type", "Type", "Camera type", 0, 3),
+        INT("type", "Type", "Camera type", 0, 3),
         F("lens", "Focal length", "Focal length (mm)", 5, 300, 35),
-        I("fov_type", "FOV mode", "Field of view mode", 0, 1, 1),
+        INT("fov_type", "FOV mode", "Field of view mode", 0, 1, 1),
         F("fov", "FOV", "Field of view (degrees)", 1, 175, 54),
         B("targeted", "Targeted", "Camera with target", True),
         F("targ_dist", "Target dist.", "Target distance", 0, DIST, 100),
@@ -177,12 +177,12 @@ TABLES = {
         F("near_clipping", "Clip near", "Clipping: near plane", 0, DIST, 0),
         B("dof_override", "Own DOF", "Depth of field: override the render settings"),
         B("dof_enabled", "DOF", "Depth of field on"),
-        I("dof_type", "DOF mode", "Depth of field mode", 0, 1),
+        INT("dof_type", "DOF mode", "Depth of field mode", 0, 1),
         F("dof_fnumber", "f-number", "Aperture (f-number)", 0.5, 32, 4, 0.1),
         F("dof_radius", "Aperture", "Aperture radius", 0, 100, 1, 0.01),
         B("dof_targeted", "Focus on target", "Focus on the camera target", True),
         F("dof_focaldist", "Focus", "Focus distance", 0, DIST, 100),
-        I("dof_blades", "Blades", "Aperture blades (0 = round)", 0, 16),
+        INT("dof_blades", "Blades", "Aperture blades (0 = round)", 0, 16),
         F("dof_rotation", "Blade rotation", "Aperture blade rotation (degrees)", 0, 360, 0),
         B("tonemap_override", "Own tone map", "Tone mapping: override the render settings"),
         B("do_tonemapping", "Tone map", "Tone mapping on", True),
@@ -213,7 +213,7 @@ TABLES = {
         F("clouds_density_multiplier", "Density mult.", "Cloud density multiplier", 0, 10, 1, 0.01),
         F("cloud_variety", "Variety", "Cloud variety", 0, 1, 0.3, 0.01),
         F("cirrus_amount", "Cirrus", "Cirrus amount", 0, 1, 0.2, 0.01),
-        I("clouds_seed", "Seed", "Random seed", 0, 99999),
+        INT("clouds_seed", "Seed", "Random seed", 0, 99999),
         F("height", "Height", "Cloud height (m)", 0, 20000, 1000, 10),
         F("thickness", "Thickness", "Cloud layer thickness (m)", 0, 5000, 500, 10),
         F("offset_X", "Offset X", "Cloud offset X (m)", -DIST, DIST, 0),
@@ -221,7 +221,7 @@ TABLES = {
         F("phase_X", "Phase X", "Cloud phase X (%)", 0, 100, 0, 0.1),
         F("phase_Y", "Phase Y", "Cloud phase Y (%)", 0, 100, 0, 0.1),
         B("clouds_contrails_enabled", "Contrails", "Contrails on"),
-        I("clouds_contrails_num_planes", "Contrail count", "Number of contrails", 0, 50, 5),
+        INT("clouds_contrails_num_planes", "Contrail count", "Number of contrails", 0, 50, 5),
         F("clouds_contrails_strength", "Contrail strength", "Contrail strength", 0, 1, 0.5, 0.01),
         F("clouds_contrails_distortion", "Contrail distortion", "Contrail distortion", 0, 1, 0.5, 0.01),
         F("clouds_contrails_offset_X", "Contrail X", "Contrail offset X (m)", -DIST, DIST, 0),
@@ -266,11 +266,11 @@ TABLES = {
         F("cloudsVariety", "Variety", "Cloud variety", 0, 1, 0.5, 0.01),
         F("cloudsCirrusAmount", "Cirrus", "Cirrus amount", 0, 1, 0.5, 0.01),
         F("cloudsPhase", "Phase", "Cloud phase (how they evolve)", 0, 1, 0, 0.01),
-        I("cloudsSeed", "Seed", "Random seed", 0, 99999),
+        INT("cloudsSeed", "Seed", "Random seed", 0, 99999),
         F("cloudsAltitude", "Cloud altitude", "Cloud altitude (m)", 0, 20000, 1000, 10),
         F("cloudsHeight", "Cloud height", "Cloud layer height (m)", 0, 10000, 1000, 10),
         B("cloudsContrailsEnable", "Contrails", "Contrails on"),
-        I("cloudsContrailsNumPlanes", "Contrail count", "Number of contrails", 0, 50, 5),
+        INT("cloudsContrailsNumPlanes", "Contrail count", "Number of contrails", 0, 50, 5),
         F("cloudsContrailsStrength", "Contrail strength", "Contrail strength", 0, 1, 0.5, 0.01),
         F("cloudsContrailsDistortion", "Contrail distortion", "Contrail distortion", 0, 1, 0.5, 0.01),
         F("cloudsContrailsTime", "Contrail time", "Contrail time", 0, 100, 0, 0.1),
@@ -334,7 +334,7 @@ TABLES = {
         B("invert", "Invert", "Invert the colours"),
     ],
     "corona_select": [
-        I("selected", "Input", "Selected input", 0, 50),
+        INT("selected", "Input", "Selected input", 0, 50),
     ],
     # ------------------------------------------------------------------ dome light (V-Ray)
     "vray_dome": [
@@ -347,7 +347,7 @@ TABLES = {
         B("affect_reflections", "Reflections", "Shows in reflections", True),
         B("dome_spherical", "Full sphere", "Spherical dome (full sphere)", True),
         B("dome_affect_alpha", "Alpha", "Dome affects the alpha"),
-        I("texmap_locktodome", "Lock map", "Lock the texture to the dome", 0, 1),
+        INT("texmap_locktodome", "Lock map", "Lock the texture to the dome", 0, 1),
     ],
     # ------------------------------------------------------------------ layers and objects (table columns)
     "max_layers": [
@@ -386,8 +386,8 @@ TABLES = {
     ],
     # ------------------------------------------------------------------ render settings
     "vray_render": [
-        I("progressive_minSamples", "Progressive min", "Progressive: min subdivs", 1, 100, 1, on=True),
-        I("progressive_maxSamples", "Progressive max", "Progressive: max subdivs", 1, 1000, 100, on=True),
+        INT("progressive_minSamples", "Progressive min", "Progressive: min subdivs", 1, 100, 1, on=True),
+        INT("progressive_maxSamples", "Progressive max", "Progressive: max subdivs", 1, 1000, 100, on=True),
         F("progressive_noise_threshold", "Progressive noise", "Progressive: noise limit", 0, 1, 0.01, 0.001, on=True),
         F(
             "progressive_max_render_time",
@@ -399,38 +399,38 @@ TABLES = {
             0.5,
             on=True,
         ),
-        I("twoLevel_baseSubdivs", "Bucket min", "Bucket: min subdivs", 1, 100, 1),
-        I("twoLevel_fineSubdivs", "Bucket max", "Bucket: max subdivs", 1, 100, 24),
+        INT("twoLevel_baseSubdivs", "Bucket min", "Bucket: min subdivs", 1, 100, 1),
+        INT("twoLevel_fineSubdivs", "Bucket max", "Bucket: max subdivs", 1, 100, 24),
         F("twoLevel_threshold", "Bucket noise", "Bucket: noise limit", 0, 1, 0.01, 0.001),
-        I("imageSampler_shadingRate", "Shading rate", "Image sampler: shading rate", 1, 64, 6),
-        I("lightcache_subdivs", "Light cache", "Light cache subdivs", 100, 20000, 1000),
+        INT("imageSampler_shadingRate", "Shading rate", "Image sampler: shading rate", 1, 64, 6),
+        INT("lightcache_subdivs", "Light cache", "Light cache subdivs", 100, 20000, 1000),
     ],
     "vraygpu_render": [
         F("max_render_time", "Time limit", "Time limit (minutes, 0 = none)", 0, 1440, 0, 0.5, on=True),
-        I("max_paths_per_pixel", "Samples", "Sample limit (0 = none)", 0, 100000, 0, on=True),
+        INT("max_paths_per_pixel", "Samples", "Sample limit (0 = none)", 0, 100000, 0, on=True),
         F("aa_threshold", "Noise limit", "Noise limit", 0, 1, 0.01, 0.001, on=True),
-        I("raysPerPixel", "Rays / pixel", "Rays per pixel", 1, 128, 16),
-        I("bundleSize", "Bundle size", "Ray bundle size", 32, 4096, 256),
-        I("ipr_raysPerPixel", "IPR rays", "Rays per pixel in interactive", 1, 128, 1),
-        I("undersampling", "Undersampling", "Interactive undersampling", 0, 8, 2),
+        INT("raysPerPixel", "Rays / pixel", "Rays per pixel", 1, 128, 16),
+        INT("bundleSize", "Bundle size", "Ray bundle size", 32, 4096, 256),
+        INT("ipr_raysPerPixel", "IPR rays", "Rays per pixel in interactive", 1, 128, 1),
+        INT("undersampling", "Undersampling", "Interactive undersampling", 0, 8, 2),
     ],
     "corona_render": [
-        I("progressive_passLimit", "Passes", "Pass limit (0 = none)", 0, 1000, 0, on=True),
+        INT("progressive_passLimit", "Passes", "Pass limit (0 = none)", 0, 1000, 0, on=True),
         F("adaptivity_targetError", "Noise limit", "Noise level limit (%, 0 = none)", 0, 50, 0, 0.1, on=True),
-        I("progressive_timeLimit", "Time limit", "Time limit (minutes, 0 = none)", 0, 1440, 0, on=True),
-        I("shading_maxRayDepth", "Ray depth", "Max ray depth", 1, 256, 25),
-        I("shading_giToAaRatio", "GI vs AA", "GI / AA balance", 1, 64, 16),
+        INT("progressive_timeLimit", "Time limit", "Time limit (minutes, 0 = none)", 0, 1440, 0, on=True),
+        INT("shading_maxRayDepth", "Ray depth", "Max ray depth", 1, 256, 25),
+        INT("shading_giToAaRatio", "GI vs AA", "GI / AA balance", 1, 64, 16),
         F("lights_samplesMult", "Light samples", "Light samples multiplier", 0, 64, 2, 0.1),
         F("shading_maxSampleIntensity", "Max intensity", "Max sample intensity (0 = off)", 0, 500, 20, 0.5),
         B("caustics_use", "Caustics", "Caustics solver on"),
         B("lights_renderHidden", "Hidden lights", "Render hidden lights"),
     ],
     "fstorm_render": [
-        I("max_samples", "Samples", "Sample limit", 1, 100000, 1000, on=True),
+        INT("max_samples", "Samples", "Sample limit", 1, 100000, 1000, on=True),
         F("time_limit", "Time limit", "Time limit (minutes)", 0, 1440, 0, 0.5, on=True),
         F("noise_threshold", "Noise limit", "Noise limit", 0, 1, 0.01, 0.001, on=True),
-        I("light_samples", "Light samples", "Light samples", 1, 64, 4),
-        I("max_depth", "Ray depth", "Max ray depth", 1, 64, 8),
+        INT("light_samples", "Light samples", "Light samples", 1, 64, 4),
+        INT("max_depth", "Ray depth", "Max ray depth", 1, 64, 8),
         B("min_samples_enabled", "Min samples", "Minimum samples on"),
         F("min_samples_ratio", "Min ratio", "Minimum samples ratio", 0, 100, 3, 0.1),
         B("process_alpha", "Alpha", "Compute the alpha"),
@@ -530,14 +530,14 @@ TABLES["corona_cam_overrides"] = [
     F("bloomGlareSize", "Bloom size", "Bloom & glare size", 0, 100, 15, 0.1),
     F("bloomGlareColorIntensity", "Bloom colour", "Bloom & glare colour intensity", 0, 1, 0.3, 0.01),
     F("bloomGlareColorShift", "Colour shift", "Bloom & glare colour shift", 0, 1, 0.5, 0.01),
-    I("glareStreakCount", "Streaks", "Glare streak count", 1, 8, 3),
+    INT("glareStreakCount", "Streaks", "Glare streak count", 1, 8, 3),
     F("glareRotation", "Glare rotation", "Glare rotation (degrees)", 0, 360, 15, 1),
     F("glareStreakBlur", "Streak blur", "Glare streak blur", 0, 1, 0.2, 0.01),
     B("overrideBokeh", "Own bokeh", "Bokeh: override"),
-    I("bokehBladeCount", "Blades", "Aperture blades", 3, 12, 6),
+    INT("bokehBladeCount", "Blades", "Aperture blades", 3, 12, 6),
     F("bokehRotation", "Blade rotation", "Aperture blade rotation (degrees)", 0, 360, 0, 1),
     F("shutterAngle", "Shutter angle", "Shutter angle (degrees)", 0, 360, 180, 1),
-    I(
+    INT(
         "projection",
         "Projection",
         "Projection (0 perspective, 1 cylindrical, 2 spherical, 3 VR, 4 fisheye, 5 ortho)",
@@ -548,9 +548,9 @@ TABLES["corona_cam_overrides"] = [
 
 # a few more Corona render settings
 TABLES["corona_render"] += [
-    I("denoise_filterType", "Denoiser", "Denoiser (0 none, 1 high quality, 2 NVIDIA, 3 Intel)", 0, 3),
+    INT("denoise_filterType", "Denoiser", "Denoiser (0 none, 1 high quality, 2 NVIDIA, 3 Intel)", 0, 3),
     F("denoise_blendAmount", "Denoise amount", "Denoise amount", 0, 1, 0.65, 0.01),
-    I("shading_secondarySolver", "Secondary GI", "Secondary GI solver (0 path tracing, 3 UHD cache)", 0, 4, 3),
+    INT("shading_secondarySolver", "Secondary GI", "Secondary GI solver (0 path tracing, 3 UHD cache)", 0, 4, 3),
     B("lockSampling", "Lock sampling", "Lock the sampling pattern"),
-    I("system_numThreads", "Threads", "Render threads (0 = all)", 0, 256),
+    INT("system_numThreads", "Threads", "Render threads (0 = all)", 0, 256),
 ]

@@ -22,7 +22,7 @@ def _set_open_flag(on):
 
         rt.oscn_isOpen = bool(on)
         rt.updateToolbarButtons()
-    except Exception:
+    except (ImportError, RuntimeError, AttributeError):
         pass
 
 
@@ -88,14 +88,14 @@ def show():
         _win = window.SceneManager(main)
         _place(_win, main)
         _set_open_flag(True)
-    except Exception:
+    except Exception:  # noqa: BLE001 - any failure to open the window is printed in the Listener and said in a message
         traceback.print_exc()
         _win = None
         try:
             from pymxs import runtime as rt
 
             rt.messageBox("OpenScene could not start.\nSee the MAXScript Listener for details.", title="OpenScene")
-        except Exception:
+        except (ImportError, RuntimeError, AttributeError):
             pass
     return _win
 

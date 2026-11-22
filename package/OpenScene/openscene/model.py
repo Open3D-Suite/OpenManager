@@ -370,7 +370,8 @@ def new_env_entry():
 
 
 def env_mixing(block, engine):
-    """Several environment tabs are added together in the environment slot (like a LightMix): Corona, two tabs or more."""
+    """Several environment tabs are added together in the environment slot (like a LightMix): Corona, two tabs
+    or more."""
     return engine == "corona" and len(entries(block)) > 1 and bool(block.get("mix", True))
 
 
@@ -404,16 +405,17 @@ def env_rows(m, enabled_rows_):
     return rows
 
 
-def light_tabs_classes(l):
+def light_tabs_classes(light):
     """Classes whose tabs apply to a sun: a Daylight shows its own tab and the one of the sun inside it."""
-    if not l:
+    if not light:
         return []
-    return [c for c in (l.get("class"), l.get("sun_class")) if c]
+    return [c for c in (light.get("class"), light.get("sun_class")) if c]
 
 
-def light_prop(l, tab, prop):
+def light_prop(light, tab, prop):
     """Property path on the node: settings of the sun inside a Daylight go through .sun"""
-    if l and l.get("sun_class") and tab_matches(tab, l.get("sun_class")) and not tab_matches(tab, l.get("class")):
+    sun_class = light.get("sun_class") if light else None
+    if sun_class and tab_matches(tab, sun_class) and not tab_matches(tab, light.get("class")):
         return "sun." + prop["name"]
     return prop["name"]
 
@@ -964,7 +966,7 @@ def preview_cache_name(raw, size=0, mtime=0.0):
 
     key = "%s|%d|%d" % (os.path.normcase(os.path.abspath(raw)), int(size), int(mtime))
     stem = re.sub(r"[^A-Za-z0-9_-]+", "_", os.path.splitext(os.path.basename(raw))[0])[:40]
-    return "%s_%s.jpg" % (stem, hashlib.md5(key.encode("utf-8")).hexdigest()[:10])
+    return "%s_%s.jpg" % (stem, hashlib.md5(key.encode("utf-8"), usedforsecurity=False).hexdigest()[:10])
 
 
 def clone(s, new_id):

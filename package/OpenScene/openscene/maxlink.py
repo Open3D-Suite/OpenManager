@@ -4,10 +4,14 @@ import json
 import os
 import tempfile
 
-from pymxs import runtime as rt
 import pymxs
+from pymxs import runtime as rt
 
 from . import external, model
+
+# What a call into 3ds Max raises through pymxs: a MAXScript error comes as RuntimeError; a renderer or a property
+# this 3ds Max does not have, as AttributeError or TypeError; a value it cannot take, as ValueError.
+MAX_ERRORS = (RuntimeError, AttributeError, TypeError, ValueError)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.join(os.path.dirname(HERE), "openscene_core.ms")
@@ -45,7 +49,7 @@ class Scene(object):
         self.object_total = d.get("object_total", len(self.objects))
         self.xrefs = d.get("xrefs", [])
         self._cam = {c["handle"]: c for c in self.cameras}
-        self._light = {l["handle"]: l for l in self.lights}
+        self._light = {light["handle"]: light for light in self.lights}
         self._obj = {o["handle"]: o for o in self.objects}
 
     @property
@@ -83,13 +87,13 @@ class Scene(object):
         return [m for m in self.maps if m.get("offer", True) or (m["class"], m["name"]) in keep]
 
     def suns(self):
-        return [l for l in self.lights if l["kind"] == "sun"]
+        return [light for light in self.lights if light["kind"] == "sun"]
 
     def domes(self):
-        return [l for l in self.lights if l["kind"] == "dome"]
+        return [light for light in self.lights if light["kind"] == "dome"]
 
     def other_lights(self):
-        return [l for l in self.lights if l["kind"] == "light"]
+        return [light for light in self.lights if light["kind"] == "light"]
 
     def find_by_name(self, items, name):
         for it in items:
@@ -102,7 +106,7 @@ def read_scene_raw(handles=None):
     """The scene as JSON text; objects only for `handles` (the ones the setups use)."""
     try:
         rt.oscn_sceneRead()  # the next #scene event goes to Python again
-    except Exception:
+    except MAX_ERRORS:
         pass
     return str(rt.oscn_scene(objHandles=sorted(int(h) for h in (handles or []))))
 
@@ -191,7 +195,7 @@ def read_pipeline(obj, prop):
     out = []
     try:
         op = rt.getProperty(obj, prop)
-    except Exception:
+    except MAX_ERRORS:
         return out
     guard = 0
     while op is not None and guard < 64:
@@ -202,7 +206,7 @@ def read_pipeline(obj, prop):
             n = str(n)
             try:
                 v = rt.getProperty(op, n)
-            except Exception:
+            except MAX_ERRORS:
                 continue
             if n.endswith("_nextOperator"):
                 nxt = v
@@ -259,7 +263,7 @@ def write_pipeline(obj, prop, chain):
         if prev is not None:
             try:
                 rt.setProperty(prev, "colorMappingOperator_nextOperator", op)
-            except Exception:
+            except MAX_ERRORS:
                 pass
         first = first or op
         prev = op
@@ -301,7 +305,7 @@ def read_post(key, only_active=False):
         ):
             try:
                 vals = list(rt.getProperty(r, name) or [])
-            except Exception:
+            except MAX_ERRORS:
                 continue
             if name == "colorMap_lightmixColors":
                 vals = [[float(c.r), float(c.g), float(c.b)] for c in vals]
@@ -350,7 +354,7 @@ def apply_tone(chain):
         if op not in used:
             try:
                 rt.setProperty(op, "colorMappingOperator_enabled", False)
-            except Exception:
+            except MAX_ERRORS:
                 pass
 
 
@@ -365,7 +369,7 @@ def apply_lightmix(arrays):
             vals = [rt.Color(*c) for c in vals]
         try:
             rt.setProperty(r, name, vals)
-        except Exception as ex:
+        except MAX_ERRORS as ex:
             print("OpenScene: %s -> %s" % (name, ex))
 
 
@@ -445,33 +449,33 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
             (
                 "sun",
                 tuple(int(x["handle"]) for x in suns if x.get("handle") is not None),
-                tuple(sorted(int(l["handle"]) for l in scene.suns())),
+                tuple(sorted(int(light["handle"]) for light in scene.suns())),
             )
         )
         for i, en in enumerate(suns):
             h = en.get("handle")
             if h is None:
                 continue
-            l = scene.light(h)
+            light = scene.light(h)
             store = props if i == 0 else en.get("props", {})
-            classes = model.light_tabs_classes(l)
+            classes = model.light_tabs_classes(light)
             for t, p in enabled(3):
                 if any(model.tab_matches(t, c) for c in classes):
                     v = store.get("3|%s|%s" % (t["v_class"], p["name"]))
                     if v is not None:
-                        out.append(("node", h, model.light_prop(l, t, p), _value(p, v)))
+                        out.append(("node", h, model.light_prop(light, t, p), _value(p, v)))
     dome = s["dome"]
     if dome["enabled"]:
         out.append(
             (
                 "dome",
                 (int(dome["handle"]),) if dome.get("handle") is not None else (),
-                tuple(sorted(int(l["handle"]) for l in scene.domes())),
+                tuple(sorted(int(light["handle"]) for light in scene.domes())),
             )
         )
         if dome.get("handle") is not None:
-            l = scene.light(dome["handle"])
-            cls = l["class"] if l else None
+            light = scene.light(dome["handle"])
+            cls = light["class"] if light else None
             for t, p in enabled(4):
                 if model.tab_matches(t, cls):
                     v = stored(4, t, p)
@@ -494,7 +498,7 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
             if not mm:
                 continue
             store = props if i == 0 else en.get("props", {})
-            for t, p, link, key_cls in model.env_rows(mm, enabled(6)):
+            for _tab, p, link, key_cls in model.env_rows(mm, enabled(6)):
                 v = store.get("6|%s|%s" % (key_cls, p["name"]))
                 if v is not None:
                     out.append(("map", link["class"], link["name"], p["name"], _value(p, v)))
@@ -506,24 +510,24 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
             out.append(("mkdir", output_path))
         out.append(("output", output_path))
     if s["layers"]["enabled"]:
-        for l in s["layers"]["set"]:
+        for layer in s["layers"]["set"]:
             for _, p in enabled(14):
                 if p["class"] != "BooleanClass":
                     continue
                 n = p["name"]
                 if n == "on":
-                    v = l["visible"]
+                    v = layer["visible"]
                 elif n == "isfrozen":
-                    v = l["freeze"]
+                    v = layer["freeze"]
                 elif n == "renderable":
-                    v = l["render"]
+                    v = layer["render"]
                 elif n == "primaryVisibility":
-                    v = l["vcam"]
-                elif n in l.get("extra", {}):
-                    v = l["extra"][n]
+                    v = layer["vcam"]
+                elif n in layer.get("extra", {}):
+                    v = layer["extra"][n]
                 else:
                     continue
-                out.append(("layer", l["name"], n, bool(v)))
+                out.append(("layer", layer["name"], n, bool(v)))
     if s["objects"]["enabled"]:
         for o in s["objects"]["set"]:
             for _, p in enabled(23):
@@ -606,18 +610,18 @@ def run(acts, redraw=True):
         dialog_open = bool(rt.renderSceneDialog.isOpen())
         if dialog_open:
             rt.renderSceneDialog.commit()
-    except Exception:
+    except MAX_ERRORS:
         pass
     with pymxs.undo(False):
         for a in acts:
             try:
                 _run_one(a)
-            except Exception as ex:  # one bad setting must not stop the rest
+            except Exception as ex:  # noqa: BLE001 - one bad setting must not stop the rest; it is printed in the Listener
                 print("OpenScene: %s -> %s" % (str(a)[:160], ex))
     if dialog_open:
         try:
             rt.renderSceneDialog.update()
-        except Exception:
+        except MAX_ERRORS:
             pass
     if redraw:
         rt.redrawViews()
@@ -681,11 +685,7 @@ def _run_one(a):
                 fh.write(a[1])
             rt.oscn_postLoad(path)
         lm = json.loads(a[2]) if a[2] else {}
-        for name, v in lm.items():
-            try:
-                rt.setProperty(rt.renderers.current, name, v)
-            except Exception:
-                pass
+        apply_lightmix(lm if isinstance(lm, dict) else {})
     elif k == "posttone":
         apply_tone(json.loads(a[1]))
     elif k == "postlm":
@@ -722,7 +722,7 @@ def read_special(kind, a, prop, cls):
             return "#%02x%02x%02x" % (int(v.r), int(v.g), int(v.b))
         if cls == "Texturemap":
             return "" if v is None else "%s|%s" % (rt.classOf(v), v.name)
-    except Exception:
+    except MAX_ERRORS:
         return None
     return None
 
@@ -794,21 +794,21 @@ def batch_view(cam, name, state, preset, out, w, h):
 def interactive_running():
     try:
         return int(rt.oscn_isRendering()) != 0
-    except Exception:
+    except MAX_ERRORS:
         return False
 
 
 def interactive_stop():
     try:
         rt.CoronaRenderer.CoronaFp.stopRender()
-    except Exception:
+    except MAX_ERRORS:
         pass
 
 
 def interactive_start():
     try:
         rt.CoronaRenderer.CoronaFp.startInteractive()
-    except Exception:
+    except MAX_ERRORS:
         pass
 
 
@@ -816,7 +816,7 @@ def viewport_camera():
     try:
         c = rt.viewport.getCamera()
         return None if c is None else int(c.inode.handle)
-    except Exception:
+    except MAX_ERRORS:
         return None
 
 
@@ -891,7 +891,7 @@ def main_window():
         import qtmax
 
         return qtmax.GetQMaxMainWindow()
-    except Exception:
+    except (ImportError, AttributeError, RuntimeError):
         return None
 
 

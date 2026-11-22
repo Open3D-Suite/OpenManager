@@ -15,35 +15,35 @@ from .widgets import (
     NumberRow,
     Spin,
     TabBar,
+    blend,
     icon,
     menu_tool,
-    tool,
-    blend,
     pal,
     text_color,
+    tool,
 )
 
 
 def hrow(*widgets, stretch_index=None, spacing=4):
     w = QtWidgets.QWidget()
-    l = QtWidgets.QHBoxLayout(w)
-    l.setContentsMargins(0, 0, 0, 0)
-    l.setSpacing(spacing)
+    row = QtWidgets.QHBoxLayout(w)
+    row.setContentsMargins(0, 0, 0, 0)
+    row.setSpacing(spacing)
     for i, x in enumerate(widgets):
         if x is None:
-            l.addStretch(1)
+            row.addStretch(1)
         elif isinstance(x, int):
-            l.addSpacing(x)
+            row.addSpacing(x)
         else:
-            l.addWidget(x, 1 if i == stretch_index else 0)
+            row.addWidget(x, 1 if i == stretch_index else 0)
     return w
 
 
 def muted(text):
-    l = QtWidgets.QLabel(text)
-    l.setEnabled(False)
-    l.setWordWrap(True)
-    return l
+    label = QtWidgets.QLabel(text)
+    label.setEnabled(False)
+    label.setWordWrap(True)
+    return label
 
 
 def fit_columns(table):
@@ -592,40 +592,41 @@ class LightPickCard(Card):
         if self.MULTI:
             titles = []
             for i, e in enumerate(model.entries(s[self.KIND])):
-                l = self.sm.scene.light(e.get("handle"))
-                titles.append(l["name"] if l else "%s %d" % (model.CARDS[self.CARD_ID][0], i + 1))
+                light = self.sm.scene.light(e.get("handle"))
+                titles.append(light["name"] if light else "%s %d" % (model.CARDS[self.CARD_ID][0], i + 1))
             self.entry_tabs.set_tabs(titles, self.tab)
         with Blocker(self.combo):
             self.combo.clear()
             self.combo.addItem(self.NONE_TEXT if self.tab == 0 else "(choose one)", None)
-            # every sun / Daylight of the scene is always listed; one another tab already uses is shown but can't be taken twice
+            # every sun / Daylight of the scene is always listed; one another tab already uses is shown but can't be
+            # taken twice
             used = {}
             for i, e in enumerate(model.entries(s[self.KIND])):
                 if e is not c and e.get("handle") is not None:
                     used.setdefault(e.get("handle"), i + 1)
-            for l in self.items():
-                text = l["name"]
-                if l.get("class") == "DaylightAssemblyHead":
-                    text += "  (Daylight%s)" % (": " + l["sun_class"] if l.get("sun_class") else "")
-                if l["handle"] in used:
-                    text += "  - in tab %d" % used[l["handle"]]
-                self.combo.addItem(text, l["handle"])
-                if l["handle"] in used:
+            for item in self.items():
+                text = item["name"]
+                if item.get("class") == "DaylightAssemblyHead":
+                    text += "  (Daylight%s)" % (": " + item["sun_class"] if item.get("sun_class") else "")
+                if item["handle"] in used:
+                    text += "  - in tab %d" % used[item["handle"]]
+                self.combo.addItem(text, item["handle"])
+                if item["handle"] in used:
                     it = self.combo.model().item(self.combo.count() - 1)
                     if it is not None:
                         it.setEnabled(False)
             i = self.combo.findData(c.get("handle"))
             self.combo.setCurrentIndex(max(0, i))
-        l = self.sm.scene.light(c.get("handle"))
-        classes = model.light_tabs_classes(l)
+        light = self.sm.scene.light(c.get("handle"))
+        classes = model.light_tabs_classes(light)
         rows = [(t, p) for t, p in self.sm.enabled_rows(self.CARD_ID) if any(model.tab_matches(t, x) for x in classes)]
         self.rows.fill(s, rows, store=model.entry_store(s, s[self.KIND], self.tab), entry=self.tab)
-        if l and not rows:
+        if light and not rows:
             self.hint.setText(
                 "No settings of %s are ticked: choose them with the puzzle piece (Property Selector)."
                 % " / ".join(classes)
             )
-        self.hint.setVisible(bool(l) and not rows)
+        self.hint.setVisible(bool(light) and not rows)
 
     def _chosen(self, i):
         s = self.setup()
@@ -634,8 +635,8 @@ class LightPickCard(Card):
         h = self.combo.itemData(i)
         c = self._entry(s)
         c["handle"] = h
-        l = self.sm.scene.light(h)
-        c["name"] = l["name"] if l else ""
+        light = self.sm.scene.light(h)
+        c["name"] = light["name"] if light else ""
         self.sm.query_values()
         self.sm.changed()
         self.fill(s)
@@ -1049,10 +1050,10 @@ NOT_SET_TIP = "Rows half ticked are listed by other setups but not set in this o
 
 def scene_layer_entry(scene_layers, name):
     """A row for this layer at its state in the scene now (scene_layers: name -> layer of the last scene read)."""
-    l = scene_layers.get(name)
-    if l is None:
+    layer = scene_layers.get(name)
+    if layer is None:
         return model.layer_entry(name)
-    return model.layer_entry(name, l["visible"], l.get("frozen", False), l.get("render", True))
+    return model.layer_entry(name, layer["visible"], layer.get("frozen", False), layer.get("render", True))
 
 
 def share_rows(sm, own, key, field, entries):
@@ -1104,7 +1105,7 @@ class LayersCard(Card):
     def fill(self, s):
         cols = self.columns()
         flt = self.filter.text().lower()
-        own = {l["name"]: l for l in s["layers"]["set"]}
+        own = {layer["name"]: layer for layer in s["layers"]["set"]}
         rows = [e["name"] for e in model.shared_rows(self.sm.setups, "layers", "name") if flt in e["name"].lower()]
         with Blocker(self.table):
             self.table.clear()
@@ -1113,16 +1114,16 @@ class LayersCard(Card):
             self.table.setRowCount(len(rows))
             names = set(x["name"] for x in self.sm.scene.layers)
             for r, name in enumerate(rows):
-                l = own.get(name)
+                item = own.get(name)
                 self.table.setItem(
-                    r, 0, self.table.name_item(name if name in names else name + " (missing)", name, l is None)
+                    r, 0, self.table.name_item(name if name in names else name + " (missing)", name, item is None)
                 )
                 for c, p in enumerate(cols):
-                    if l is None:
+                    if item is None:
                         on = None
                     else:
                         f = self.FIELD.get(p["name"])
-                        on = l[f] if f else l.get("extra", {}).get(p["name"], p.get("value", False) is True)
+                        on = item[f] if f else item.get("extra", {}).get(p["name"], p.get("value", False) is True)
                     fi = self.table.flag_item(on)
                     fi.setData(QtCore.Qt.UserRole, p["name"])
                     self.table.setItem(r, c + 1, fi)
@@ -1143,18 +1144,19 @@ class LayersCard(Card):
         made = False
         for r in rows:
             name = self.table.item(r, 0).data(QtCore.Qt.UserRole)
-            l = own.get(name)
-            if l is None:  # a row of the shared list this setup didn't set yet: it starts from the scene as it is now
+            layer = own.get(name)
+            # a row of the shared list this setup didn't set yet: it starts from the scene as it is now
+            if layer is None:
                 if scene is None:
                     scene = {x["name"]: x for x in self.sm.scene.layers}
-                l = own[name] = scene_layer_entry(scene, name)
-                s["layers"]["set"].append(l)
+                layer = own[name] = scene_layer_entry(scene, name)
+                s["layers"]["set"].append(layer)
                 made = True
             f = self.FIELD.get(prop)
             if f:
-                l[f] = on
+                layer[f] = on
             else:
-                l.setdefault("extra", {})[prop] = on
+                layer.setdefault("extra", {})[prop] = on
         if len(rows) > 1 or made:
             self.fill(s)
         self.sm.changed()
@@ -1164,8 +1166,8 @@ class LayersCard(Card):
         if not s:
             return
         s["layers"]["set"] = [
-            model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True))
-            for l in self.sm.scene.layers
+            model.layer_entry(layer["name"], layer["visible"], layer.get("frozen", False), layer.get("render", True))
+            for layer in self.sm.scene.layers
         ]
         share_rows(self.sm, s, "layers", "name", s["layers"]["set"])
         if not s["layers"]["enabled"]:
@@ -1182,8 +1184,8 @@ class LayersCard(Card):
         if not s:
             return
         names = maxlink.selected_layers()
-        have = set(l["name"] for l in s["layers"]["set"])
-        new = [l for l in self.sm.scene.layers if l["name"] in names and l["name"] not in have]
+        have = set(layer["name"] for layer in s["layers"]["set"])
+        new = [layer for layer in self.sm.scene.layers if layer["name"] in names and layer["name"] not in have]
         if not new:
             self.sm.toast("Those layers are already in this setup" if names else "Select a layer first")
         self._add(new)
@@ -1193,7 +1195,8 @@ class LayersCard(Card):
         if not s:
             return
         new = [
-            model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True)) for l in layers
+            model.layer_entry(layer["name"], layer["visible"], layer.get("frozen", False), layer.get("render", True))
+            for layer in layers
         ]
         s["layers"]["set"].extend(new)
         share_rows(self.sm, s, "layers", "name", new)
@@ -1210,7 +1213,7 @@ class LayersCard(Card):
         if not names:
             return
         for x in self.sm.setups:  # the list is shared: a row leaves every setup
-            x["layers"]["set"] = [l for l in x["layers"]["set"] if l["name"] not in names]
+            x["layers"]["set"] = [layer for layer in x["layers"]["set"] if layer["name"] not in names]
         self.fill(s)
         self.sm.changed()
         self.sm.toast("Removed %d layer(s) from every setup" % len(names))
@@ -1261,8 +1264,8 @@ class ObjectsCard(Card):
 
             try:
                 self.sm.scene.add_objects(maxlink.nodes_info(unknown))
-            except Exception:
-                pass
+            except maxlink.MAX_ERRORS as ex:
+                print("OpenScene: objects not read from the scene: %s" % ex)
         n = len(shared)
         self.count.setText("%d object%s" % (n, "" if n == 1 else "s") if n else "Select objects in the scene, then +")
         with Blocker(self.table):
@@ -1393,8 +1396,8 @@ class LightsCard(Card):
             self.table.setHorizontalHeaderLabels(["Name"] + [p.get("short") or p["name"] for p in cols])
             self.table.setRowCount(len(hs))
             for r, h in enumerate(hs):
-                l = self.sm.scene.light(h)
-                it = QtWidgets.QTableWidgetItem(l["name"] if l else "#%s (missing)" % h)
+                light = self.sm.scene.light(h)
+                it = QtWidgets.QTableWidgetItem(light["name"] if light else "#%s (missing)" % h)
                 it.setData(QtCore.Qt.UserRole, h)
                 it.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
                 self.table.setItem(r, 0, it)
@@ -1440,9 +1443,9 @@ class LightsCard(Card):
         self.add_menu.addAction("Lights selected in the scene", self._add_selected)
         self.add_menu.addSeparator()
         have = set(s["lights"]["set"])
-        for l in self.sm.scene.other_lights()[:300]:
-            if l["handle"] not in have:
-                self.add_menu.addAction(l["name"], lambda h=l["handle"]: self._add([h]))
+        for light in self.sm.scene.other_lights()[:300]:
+            if light["handle"] not in have:
+                self.add_menu.addAction(light["name"], lambda h=light["handle"]: self._add([h]))
 
     def _add_selected(self):
         hs = [h for h in self.sm.selected_handles() if self.sm.scene.light(h)]
@@ -1615,10 +1618,11 @@ class OutputCard(Card):
             "UserName": self.sm.user_name,
             "SceneName": s["scenename"],
         }
-        for row, t in zip(self.rows, s["output"]["preset"]):
+        for row, t in zip(self.rows, s["output"]["preset"], strict=False):
             with Blocker(row.val, row.folder, *([row.digits] if row.digits else [])):
                 if isinstance(row.val, QtWidgets.QComboBox):
-                    # a value from an older file or a preset that the list doesn't have is shown as it is, not as the first one
+                    # a value from an older file or a preset that the list doesn't have is shown as it is, not as the
+                    # first one
                     if t["value"] and row.val.findText(t["value"]) < 0:
                         row.val.addItem(t["value"])
                     row.val.setCurrentText(t["value"])
@@ -1919,7 +1923,7 @@ class HdriCard(Card):
         if self.sm.rendering:
             return
         nxt = None
-        for k, (it, raw) in enumerate(self._missing):
+        for k, (_item, raw) in enumerate(self._missing):
             if not self._auto or self._size_mb(raw) <= self.AUTO_MB:
                 nxt = k
                 break
@@ -1933,7 +1937,7 @@ class HdriCard(Card):
         ok = False
         try:
             ok = maxlink.hdri_preview(raw, cached)
-        except Exception as ex:
+        except maxlink.MAX_ERRORS as ex:
             print("OpenScene: preview of %s -> %s" % (raw, ex))
         if ok:
             try:

@@ -30,7 +30,7 @@ class Dialog(QtWidgets.QDialog):
                 if msg.message == WM_CLOSE or (msg.message == WM_SYSCOMMAND and (msg.wParam & 0xFFF0) == SC_CLOSE):
                     QtCore.QTimer.singleShot(0, self.close_from_title_bar)
                     return True, 0
-        except Exception:
+        except (ValueError, TypeError, AttributeError, OSError):
             pass
         return super(Dialog, self).nativeEvent(event_type, message)
 
@@ -191,11 +191,11 @@ class SettingsDialog(Dialog):
         outer.addWidget(scroll, 1)
 
         def section(text):
-            l = QtWidgets.QLabel(text)
-            f = l.font()
+            label = QtWidgets.QLabel(text)
+            f = label.font()
             f.setBold(True)
-            l.setFont(f)
-            return l
+            label.setFont(f)
+            return label
 
         # Notification
         self.notify = QtWidgets.QCheckBox("Ask to open the window when a file with setups is opened")

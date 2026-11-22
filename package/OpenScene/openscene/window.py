@@ -9,7 +9,7 @@ import traceback
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, trust, widgets
-from .widgets import Blocker, Card, GridBoard, PRIMARY, TINTS, blend, icon, menu_tool, pal, text_color, tool
+from .widgets import PRIMARY, TINTS, Blocker, Card, GridBoard, blend, icon, menu_tool, pal, text_color, tool
 
 VERSION = __version__
 TITLE = "OpenScene"
@@ -296,7 +296,8 @@ QDockWidget { color: %(text)s; }
 QDockWidget::title { background: %(head)s; padding: 4px; }
 QWidget#osRoot, QWidget#osBoard, QDialog, QMessageBox, QColorDialog, QInputDialog { background: %(bg)s; }
 QDialog QWidget { background: %(bg)s; }
-QDialog QLineEdit, QDialog QComboBox, QDialog QSpinBox, QDialog QPlainTextEdit, QDialog QListWidget { background: %(base)s; }
+QDialog QLineEdit, QDialog QComboBox, QDialog QSpinBox, QDialog QPlainTextEdit, QDialog QListWidget {
+    background: %(base)s; }
 QDialog QAbstractButton { background: transparent; }
 QDialog QPushButton { background: %(button)s; }
 QDialog QPushButton:hover { background: %(sel)s; }
@@ -312,26 +313,33 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QPlainTextEdit, QListWidget, QTr
     background: %(base)s; color: %(text)s; border: 1px solid %(border)s; border-radius: 2px;
     selection-background-color: %(primary)s; selection-color: #ffffff; }
 QComboBox QAbstractItemView { background: %(base)s; color: %(text)s; selection-background-color: %(primary)s; }
-QHeaderView::section { background: %(head)s; color: %(text)s; border: none; border-right: 1px solid %(border)s; padding: 2px 5px; }
-QTreeWidget::item:selected, QTableWidget::item:selected, QListWidget::item:selected { background: %(sel)s; color: %(text)s; }
-QPushButton { background: %(button)s; color: %(text)s; border: 1px solid %(border)s; border-radius: 3px; padding: 3px 10px; }
+QHeaderView::section { background: %(head)s; color: %(text)s; border: none; border-right: 1px solid %(border)s;
+    padding: 2px 5px; }
+QTreeWidget::item:selected, QTableWidget::item:selected, QListWidget::item:selected {
+    background: %(sel)s; color: %(text)s; }
+QPushButton { background: %(button)s; color: %(text)s; border: 1px solid %(border)s; border-radius: 3px;
+    padding: 3px 10px; }
 QPushButton:hover, QToolButton:hover { background: %(sel)s; }
 QToolButton { color: %(text)s; background: transparent; border: none; }
 QTabBar::tab { background: %(button)s; color: %(text)s; padding: 4px 12px; border: 1px solid %(border)s; }
 QTabBar::tab:selected { background: %(base)s; }
 QTabWidget::pane { border: 1px solid %(border)s; }
 QScrollArea { background: transparent; border: none; }
-QScrollBar:vertical { background: %(bg)s; width: 10px; } QScrollBar::handle:vertical { background: %(border)s; min-height: 20px; border-radius: 4px; }
-QScrollBar:horizontal { background: %(bg)s; height: 10px; } QScrollBar::handle:horizontal { background: %(border)s; min-width: 20px; border-radius: 4px; }
+QScrollBar:vertical { background: %(bg)s; width: 10px; }
+QScrollBar::handle:vertical { background: %(border)s; min-height: 20px; border-radius: 4px; }
+QScrollBar:horizontal { background: %(bg)s; height: 10px; }
+QScrollBar::handle:horizontal { background: %(border)s; min-width: 20px; border-radius: 4px; }
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
-QMenu { background: %(base)s; color: %(text)s; border: 1px solid %(border)s; } QMenu::item:selected { background: %(sel)s; }
+QMenu { background: %(base)s; color: %(text)s; border: 1px solid %(border)s; }
+QMenu::item:selected { background: %(sel)s; }
 QProgressBar { background: %(base)s; border: 1px solid %(border)s; text-align: center; color: %(text)s; }
 QProgressBar::chunk { background: %(primary)s; }
 QToolTip { color: %(text)s; background: %(base)s; border: 1px solid %(border)s; }
 QCheckBox::indicator, QRadioButton::indicator, QTableWidget::indicator, QListWidget::indicator {
     width: 13px; height: 13px; border: 1px solid %(dis)s; background: %(base)s; }
 QRadioButton::indicator { border-radius: 7px; }
-QCheckBox::indicator:checked, QTableWidget::indicator:checked, QListWidget::indicator:checked { background: %(primary)s; border-color: %(primary)s; }
+QCheckBox::indicator:checked, QTableWidget::indicator:checked, QListWidget::indicator:checked {
+    background: %(primary)s; border-color: %(primary)s; }
 QRadioButton::indicator:checked { background: %(primary)s; border: 3px solid %(base)s; outline: 1px solid %(primary)s; }
 """
         % t
@@ -532,7 +540,7 @@ class SceneManager(QtWidgets.QDockWidget):
                 area = par.dockWidgetArea(self)
                 st["area"] = int(area.value) if hasattr(area, "value") else int(area)
             st["column_widths"] = {k: self.tree.header().sectionSize(i) for i, k in enumerate(self.column_keys)}
-        except Exception:
+        except (RuntimeError, AttributeError, TypeError, ValueError):
             pass
         if settings_path() is None:
             print("OpenScene: settings not saved: Windows gives no folder for them (APPDATA is not set)")
@@ -585,7 +593,7 @@ class SceneManager(QtWidgets.QDockWidget):
             try:
                 with open(default_settings_path(), "r", encoding="utf-8") as f:
                     self.settings = json.load(f)
-            except Exception:
+            except (OSError, ValueError):
                 self.toast("You have no default settings saved yet")
                 return
         else:
@@ -699,7 +707,7 @@ class SceneManager(QtWidgets.QDockWidget):
             raw = self._read_raw()
             self.scene = maxlink.Scene(maxlink.parse_scene(raw))
             self._scene_raw = raw
-        except Exception:
+        except Exception:  # noqa: BLE001 - a scene that cannot be read must not stop the window; printed in the Listener
             traceback.print_exc()
         self.todo = data["todo"]
         self.rs_default = data.get("rs_default") or {}
@@ -721,7 +729,8 @@ class SceneManager(QtWidgets.QDockWidget):
             )
         if source == "external":
             self.toast("Converted %d setup(s) saved by another scene manager in this file" % len(self.setups))
-            # written with the file next time it is saved: from then on these are the setups (the others are not read again)
+            # written with the file next time it is saved: from then on these are the setups (the others are not
+            # read again)
             self.last_saved = None
         elif source == "legacy":
             self.last_saved = None  # saved again under the new name with the file
@@ -760,7 +769,7 @@ class SceneManager(QtWidgets.QDockWidget):
                 raw = self._read_raw()
             self.scene = maxlink.Scene(maxlink.parse_scene(raw))
             self._scene_raw = raw
-        except Exception:
+        except Exception:  # noqa: BLE001 - a scene that cannot be read must not stop the window; printed in the Listener
             traceback.print_exc()
             return
         self._texmaps = None
@@ -783,7 +792,7 @@ class SceneManager(QtWidgets.QDockWidget):
         self._synced = now
         try:
             raw = self._read_raw()
-        except Exception:
+        except Exception:  # noqa: BLE001 - a scene that cannot be read must not stop the window; printed in the Listener
             traceback.print_exc()
             return False
         if raw == self._scene_raw:
@@ -827,7 +836,7 @@ class SceneManager(QtWidgets.QDockWidget):
                     self._camera_sync_tick()
             elif not self.rendering:
                 self.scene_timer.start()
-        except Exception:
+        except Exception:  # noqa: BLE001 - a timer of the window must keep running; printed in the Listener
             traceback.print_exc()
 
     def update_status(self):
@@ -1104,9 +1113,9 @@ class SceneManager(QtWidgets.QDockWidget):
                     props[key] = v
                     got = True
         for i, en in enumerate(model.entries(s["sun"])):
-            l = self.scene.light(en.get("handle"))
+            light = self.scene.light(en.get("handle"))
             store = model.entry_store(s, s["sun"], i)
-            classes = model.light_tabs_classes(l)
+            classes = model.light_tabs_classes(light)
             for t, p in self.enabled_rows(3):
                 key = "3|%s|%s" % (t["v_class"], p["name"])
                 if key not in store and any(model.tab_matches(t, c) for c in classes):
@@ -1402,8 +1411,8 @@ class SceneManager(QtWidgets.QDockWidget):
     def share_lists(self, s):
         """A new setup starts with the layers and objects the other setups list (the list is shared), at their state
         in the scene now, and with those cards on when another setup uses them."""
-        scene_layers = {l["name"]: l for l in self.scene.layers}
-        have = set(l["name"] for l in s["layers"]["set"])
+        scene_layers = {layer["name"]: layer for layer in self.scene.layers}
+        have = set(layer["name"] for layer in s["layers"]["set"])
         for e in model.shared_rows(self.setups, "layers", "name"):
             if e["name"] not in have:
                 s["layers"]["set"].append(
@@ -1441,7 +1450,8 @@ class SceneManager(QtWidgets.QDockWidget):
         s["camera"].update(handle=sc.active_camera, name=cam["name"] if cam else "", locked=bool(cam and cam["locked"]))
         s["resolution"].update(width=sc.width, height=sc.height, ratio=model.ratio(sc.width, sc.height))
         s["layers"]["set"] = [
-            model.layer_entry(l["name"], l["visible"], l.get("frozen", False), l.get("render", True)) for l in sc.layers
+            model.layer_entry(layer["name"], layer["visible"], layer.get("frozen", False), layer.get("render", True))
+            for layer in sc.layers
         ]
         if sc.env_class:
             s["environment"].update(cls=sc.env_class, name=sc.env_name)
@@ -1522,7 +1532,7 @@ class SceneManager(QtWidgets.QDockWidget):
                 continue
             try:
                 c.refresh()
-            except Exception:
+            except Exception:  # noqa: BLE001 - one card that fails must not stop the others; printed in the Listener
                 traceback.print_exc()
 
     def clipboard_has(self, cid):
@@ -1616,7 +1626,7 @@ class SceneManager(QtWidgets.QDockWidget):
         self.changed()
         self.refresh_cards()
 
-    # ------------------------------------------------------------ preset files (.osp; .smp from earlier versions is read too)
+    # ------------------------------------------------------------ preset files (.osp; .smp of earlier versions too)
     def _start_dir(self):
         return self.scene.folder or ""
 
@@ -1632,7 +1642,7 @@ class SceneManager(QtWidgets.QDockWidget):
             with open(f, "w", encoding="utf-8") as fh:
                 json.dump({"format": "openscene_preset", "setups": chosen}, fh, indent=1)
             self.toast("Exported %d setup(s)" % len(chosen))
-        except Exception as ex:
+        except (OSError, TypeError, ValueError) as ex:
             self.toast("Could not save the preset: %s" % ex)
 
     def import_setups(self):
@@ -1655,7 +1665,7 @@ class SceneManager(QtWidgets.QDockWidget):
             self.rebuild_rows()
             self.changed(apply=False)
             self.toast("Imported %d setup(s)" % len(lst))
-        except Exception:
+        except Exception:  # noqa: BLE001 - a preset file from someone else must not break the window; printed and said
             traceback.print_exc()
             self.toast("Could not read that preset")
 
@@ -1692,7 +1702,8 @@ class SceneManager(QtWidgets.QDockWidget):
                 t["output"]["preset"] = [dict(x) for x in out.get("preset", [])]
             self.changed()
             self.refresh_cards([9])
-        except Exception:
+        except Exception as ex:  # noqa: BLE001 - a preset file from someone else must not break the window; printed and said
+            print("OpenScene: preset not read: %s" % ex)
             self.toast("Invalid preset")
 
     # ------------------------------------------------------------ thumbnails, previews, bake
@@ -1738,7 +1749,7 @@ class SceneManager(QtWidgets.QDockWidget):
                 step(s, self.index_of(s))
                 done += 1
                 dlg.set_job("", done, len(setups))
-        except Exception:
+        except Exception:  # noqa: BLE001 - one setup that fails stops the run, which is said; printed in the Listener
             traceback.print_exc()
             self.toast("Stopped by an error (see the MAXScript Listener)")
         finally:
@@ -1768,7 +1779,7 @@ class SceneManager(QtWidgets.QDockWidget):
         if not self.setups:
             self.toast("There are no setups")
             return
-        for i, s in enumerate(self.setups):
+        for s in self.setups:
             cam = self.scene.camera(s["camera"]["handle"])
             s["_label"] = s["scenename"] or (cam["name"] if cam else "")
         folder = os.path.join(self.scene.folder or unsaved_dir(), "OpenScene_export").replace("\\", "/")
@@ -1859,7 +1870,7 @@ class SceneManager(QtWidgets.QDockWidget):
         self.save_setups()
         try:
             self._begin_render(jobs)
-        except Exception:
+        except Exception:  # noqa: BLE001 - what a button runs: the batch is not started, printed in the Listener
             traceback.print_exc()
             self.rendering = False
             self.widget().setEnabled(True)
@@ -1936,14 +1947,15 @@ class SceneManager(QtWidgets.QDockWidget):
         try:
             self.run_actions(self.actions_for(s, True), ask=False)
             result = maxlink.render()
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001 - one setup that fails must not stop a night of rendering; printed and listed
             traceback.print_exc()
             result = str(ex)
         took = time.time() - t0
         if result == "canceled" or maxlink.canceled():
             self.render_cancel = True
         elif result != "done":
-            # one setup that fails (a missing map, a bad path...) must not stop a night of rendering: the next one goes on
+            # one setup that fails (a missing map, a bad path...) must not stop a night of rendering: the next one
+            # goes on
             self.render_failed.append((self.setup_label(s), str(result)[:200]))
             print("OpenScene: render of %s failed -> %s" % (self.setup_label(s), result))
         else:
@@ -1961,7 +1973,7 @@ class SceneManager(QtWidgets.QDockWidget):
         self.render_cancel = True
         try:
             maxlink.stop_render()
-        except Exception:
+        except maxlink.MAX_ERRORS:
             pass
 
     def _end_render(self):
@@ -1970,7 +1982,7 @@ class SceneManager(QtWidgets.QDockWidget):
         try:
             self.batch.close()
             self.batch.deleteLater()
-        except Exception:
+        except RuntimeError:
             pass
         self.widget().setEnabled(True)
         self.refresh_cards()
@@ -2004,7 +2016,7 @@ class SceneManager(QtWidgets.QDockWidget):
         try:
             maxlink.save_setups(text)
             self.last_saved = text
-        except Exception:
+        except maxlink.MAX_ERRORS:
             traceback.print_exc()
 
     # ------------------------------------------------------------ closing
@@ -2016,7 +2028,7 @@ class SceneManager(QtWidgets.QDockWidget):
             self.sync_timer.stop()
             self.save_settings()
             maxlink.watch(None)
-        except Exception:
+        except Exception:  # noqa: BLE001 - closing the window must finish; printed in the Listener
             traceback.print_exc()
         widgets.PALETTE_OVERRIDE = None
         from . import _closed

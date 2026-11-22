@@ -132,7 +132,7 @@ class Combo(QtWidgets.QComboBox):
         if self.before_popup is not None:
             try:
                 self.before_popup()
-            except Exception:
+            except Exception:  # noqa: BLE001 - what the list runs before it opens must not stop it; printed in the Listener
                 import traceback
 
                 traceback.print_exc()
@@ -264,7 +264,7 @@ class Blocker(object):
         self.old = [w.blockSignals(True) for w in self.widgets]
 
     def __exit__(self, *a):
-        for w, o in zip(self.widgets, self.old):
+        for w, o in zip(self.widgets, self.old, strict=False):
             w.blockSignals(o)
 
 
@@ -561,7 +561,7 @@ class Card(QtWidgets.QFrame):
         try:
             if lay is not None and lay.hasHeightForWidth() and width > 0:
                 h = max(h, lay.minimumHeightForWidth(width))
-        except Exception:
+        except (RuntimeError, AttributeError):
             pass
         return self.header.height() + h + 2
 
