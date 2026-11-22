@@ -1,0 +1,41 @@
+# What the common Open3D tools need to know about this repository. tools/repo.py reads it:
+# tools/check.ps1 runs the checks, "python -I tools/repo.py version set X.Y.Z" writes a new version,
+# "python -I tools/repo.py package" makes the release package and "release X.Y.Z" the release.
+
+# Where the version lives (`source`) and the other places that repeat it. Each one is a file and a
+# pattern whose one group is the version; "^" is the start of a line. The bundle's PackageContents.xml
+# is not a place: tools/build.py writes it from the source.
+[version]
+source = { file = "package/OpenScene/openscene/__init__.py", pattern = '^__version__ = "([^"]+)"' }
+places = [
+    { file = "README.md", pattern = '^> Status: [^(\n]*\(v([^)\n]+)\)' },
+]
+
+# The checks, in the order they run. `full = true` marks one that only tools/check.ps1 -Full runs.
+[[check]]
+name = "ruff format"
+run = ["ruff", "format", "--check", "."]
+
+[[check]]
+name = "ruff check"
+run = ["ruff", "check", "."]
+
+# Reserved words used as names and bad string escapes in the MAXScript files: 3ds Max only reports them when the
+# script runs.
+[[check]]
+name = "MAXScript"
+run = ["python", "tools/check_ms.py"]
+
+# The tests that need neither 3ds Max nor Qt.
+[[check]]
+name = "tests"
+run = ["python", "tests/run.py"]
+
+# The release package: dist/openscene-<version>-windows-x64-3dsmax.zip, with OpenScene.bundle at its root and
+# LICENSE inside it, and dist/SHA256SUMS.txt. The launcher installs it from there. tools/build.py makes the
+# bundle in dist/.
+[package]
+name = "OpenScene"
+bundle = "OpenScene.bundle"
+build = [["python", "tools/build.py"]]
+files = [{ from = "dist/OpenScene.bundle", to = "OpenScene.bundle" }]

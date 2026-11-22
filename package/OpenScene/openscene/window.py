@@ -7,10 +7,10 @@ import traceback
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import cards, cards2, dialogs, icons, maxlink, model, widgets
+from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, widgets
 from .widgets import Blocker, Card, GridBoard, PRIMARY, TINTS, blend, icon, menu_tool, pal, text_color, tool
 
-VERSION = "2.2.2"
+VERSION = __version__
 TITLE = "OpenScene"
 OBJECT_NAME = "OpenScene"
 TOP_ICON = 22
@@ -30,24 +30,21 @@ def _duration(sec):
     return "%dh %02dm" % (sec // 3600, (sec % 3600) // 60)
 
 
-def cfg_dir():
-    try:
-        from pymxs import runtime as rt
-        return str(rt.getDir(rt.Name("plugcfg")))
-    except Exception:
-        return os.path.expanduser("~")
+def unsaved_dir():
+    """Where the thumbnails, exports and presets of a scene not saved yet go: OpenScene's data folder."""
+    return folders.data_path(folders.UNSAVED) or os.path.join(os.path.expanduser("~"), "OpenScene")
 
 
 def settings_path():
-    return os.path.join(cfg_dir(), "OpenScene.json")
+    return folders.settings_file(folders.SETTINGS)
 
 
 def default_settings_path():
-    return os.path.join(cfg_dir(), "OpenScene_default.json")
+    return folders.settings_file(folders.DEFAULT_LAYOUT)
 
 
 def notify_flag_path():
-    return os.path.join(cfg_dir(), "OpenScene_notify.txt")
+    return folders.settings_file(folders.NOTIFY)
 
 
 class SetupTree(QtWidgets.QTreeWidget):
@@ -423,15 +420,18 @@ class SceneManager(QtWidgets.QDockWidget):
     # ------------------------------------------------------------ settings
     def load_settings(self):
         for path in (settings_path(), default_settings_path()):
+            if not path or not os.path.isfile(path):
+                continue
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     d = json.load(f)
-                    if isinstance(d, dict):
-                        if "layouts" in d and not isinstance(d["layouts"], dict):
-                            d["layouts"] = {}
-                        return d
-            except Exception:
-                pass
+            except (OSError, ValueError) as error:
+                print("OpenScene: settings not read from %s: %s" % (path, error))
+                continue
+            if isinstance(d, dict):
+                if "layouts" in d and not isinstance(d["layouts"], dict):
+                    d["layouts"] = {}
+                return d
         return {}
 
     def save_settings(self):
@@ -448,12 +448,13 @@ class SceneManager(QtWidgets.QDockWidget):
             st["column_widths"] = {k: self.tree.header().sectionSize(i) for i, k in enumerate(self.column_keys)}
         except Exception:
             pass
+        if settings_path() is None:
+            print("OpenScene: settings not saved: Windows gives no folder for them (APPDATA is not set)")
+            return
         try:
-            with open(settings_path(), "w", encoding="utf-8") as f:
-                json.dump(st, f, indent=1)
-            with open(notify_flag_path(), "w") as f:
-                f.write("1" if st.get("notify", True) else "0")
-        except Exception as ex:
+            folders.write_json(settings_path(), st)
+            folders.write_text(notify_flag_path(), "1" if st.get("notify", True) else "0")
+        except (OSError, TypeError, ValueError) as ex:
             print("OpenScene: could not save settings: %s" % ex)
 
     def opts(self):
@@ -497,9 +498,11 @@ class SceneManager(QtWidgets.QDockWidget):
         else:
             self.settings.update(dlg.values())
             if dlg.action == "save_default":
-                with open(default_settings_path(), "w", encoding="utf-8") as f:
-                    json.dump(self.settings, f, indent=1)
-                self.toast("Saved as your default settings")
+                try:
+                    folders.write_json(default_settings_path(), self.settings)
+                    self.toast("Saved as your default settings")
+                except (OSError, TypeError, ValueError) as ex:
+                    self.toast("Could not save your default settings: %s" % ex)
         self.set_icon_size(self.settings.get("theme", {}).get("icons", "medium"))
         self.save_settings()
         self.restyle_all()
@@ -1461,7 +1464,7 @@ class SceneManager(QtWidgets.QDockWidget):
 
     # ------------------------------------------------------------ thumbnails, previews, bake
     def thumb_path(self, s):
-        folder = self.scene.folder or cfg_dir()
+        folder = self.scene.folder or unsaved_dir()
         stem = os.path.splitext(self.scene.file or "untitled")[0]
         return os.path.join(folder, "OpenScene_thumbs", "%s_%03d.png" % (stem, s["id"])).replace("\\", "/")
 
@@ -1530,7 +1533,7 @@ class SceneManager(QtWidgets.QDockWidget):
         for i, s in enumerate(self.setups):
             cam = self.scene.camera(s["camera"]["handle"])
             s["_label"] = s["scenename"] or (cam["name"] if cam else "")
-        folder = os.path.join(self.scene.folder or cfg_dir(), "OpenScene_export").replace("\\", "/")
+        folder = os.path.join(self.scene.folder or unsaved_dir(), "OpenScene_export").replace("\\", "/")
         dlg = dialogs.BakeDialog(self, self.setups, folder)
         for s in self.setups:
             s.pop("_label", None)
@@ -1552,7 +1555,7 @@ class SceneManager(QtWidgets.QDockWidget):
                 if s["camera"].get("handle") is None:
                     return
                 path, valid = self.final_path(s)
-                preset = os.path.join(self.scene.folder or cfg_dir(), "OpenScene_presets", "%s_%s.rps" % (stem, label(s, i))).replace("\\", "/")
+                preset = os.path.join(self.scene.folder or unsaved_dir(), "OpenScene_presets", "%s_%s.rps" % (stem, label(s, i))).replace("\\", "/")
                 maxlink.save_preset(preset)
                 maxlink.batch_view(s["camera"]["handle"], label(s, i), "SM_" + label(s, i), preset,
                                    path if (s["output"]["enabled"] and valid) else "", int(s["resolution"]["width"]), int(s["resolution"]["height"]))

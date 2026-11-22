@@ -1,9 +1,17 @@
-"""OpenScene for 3ds Max.
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""OpenScene for 3ds Max: scene setups and batch rendering.
 
-Started by the OpenScene macro (category OpenScene). One window per 3ds Max session.
+Started by the OpenScene macro (category OpenScene). One window per 3ds Max session. This package must stay
+importable outside 3ds Max, so that the tests can load it: pymxs and Qt are imported inside the functions that
+need them, never at module level.
 """
+
 import sys
 import traceback
+
+__version__ = "3.0.0"
+# The app's name, as the Open3D launcher shows it and as its folders are called.
+APP = "OpenScene"
 
 _win = None
 

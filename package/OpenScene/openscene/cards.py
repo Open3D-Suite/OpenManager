@@ -5,7 +5,7 @@ import os
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import model
+from . import folders, model
 from .widgets import Blocker, Card, ColorButton, Combo, NumberRow, Spin, TabBar, icon, menu_tool, tool, blend, pal, text_color
 
 
@@ -1666,12 +1666,7 @@ class HdriCard(Card):
 
     @staticmethod
     def cache_dir():
-        try:
-            from pymxs import runtime as rt
-            base = str(rt.getDir(rt.Name("plugcfg")))
-        except Exception:
-            base = os.path.expanduser("~")
-        return os.path.join(base, "OpenScene_hdri")
+        return folders.data_path(folders.HDRI_PREVIEWS) or os.path.join(os.path.expanduser("~"), "OpenScene", "hdri")
 
     def cache_file(self, raw):
         try:

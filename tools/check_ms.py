@@ -45,6 +45,7 @@ def check(path):
 def main():
     files = sys.argv[1:] or sorted(glob.glob(os.path.join(ROOT, "package", "**", "*.ms"), recursive=True)
                                    + glob.glob(os.path.join(ROOT, "package", "*.mcr"))
+                                   + glob.glob(os.path.join(ROOT, "bundle", "*.ms"))
                                    + glob.glob(os.path.join(ROOT, "*.ms")))
     bad = 0
     for f in files:
