@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The card grid: places in grid units, pushing cards out of the way, and floating everything up.
 
 Same rules as a vertical-compacting grid layout: a card dropped on another takes its place
@@ -38,7 +39,9 @@ def compact(items):
 
 def _push(items, cid, user):
     me = items[cid]
-    hit = sorted((i for i, o in items.items() if i != cid and collides(me, o)), key=lambda i: (items[i][1], items[i][0]))
+    hit = sorted(
+        (i for i, o in items.items() if i != cid and collides(me, o)), key=lambda i: (items[i][1], items[i][0])
+    )
     for other in hit:
         o = items[other]
         if not collides(me, o):

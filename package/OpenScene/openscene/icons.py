@@ -1,25 +1,83 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Small icons drawn at run time: Windows' own symbol font plus a few hand-drawn shapes.
 Nothing to ship, sharp at any DPI."""
+
 from PySide6 import QtCore, QtGui
 
 _CACHE = {}
-_ORIGIN = {}  # cacheKey of a glyph icon -> (name, color, size, base size): a theme or icon-size change redraws icons that exist
+# cacheKey of a glyph icon -> (name, color, size, base size): a theme or icon-size change redraws icons that exist
+_ORIGIN = {}
 
 GLYPH = {
-    "add": "", "delete": "", "copy": "", "paste": "", "camera": "",
-    "refresh": "", "lock": "", "unlock": "", "color": "", "import": "",
-    "export": "", "list": "", "stop": "", "sun": "", "globe": "",
-    "folder": "", "eye": "", "hide": "", "edit": "", "more": "",
-    "close": "", "filter": "", "photo": "", "clock": "", "layers": "",
-    "link": "", "bulb": "", "save": "", "grip": "", "menu": "",
-    "pick": "", "up": "", "down": "", "expand": "", "shrink": "",
-    "fetch": "", "cube": "", "settings": "", "note": "", "check": "",
-    "checklist": "", "cards": "", "cut": "", "select": "", "dup": "",
-    "transfer": "", "text": "", "resolution": "", "image": "",
-    "dome": "", "mountain": "", "wind": "", "swatch": "", "sliders": "",
-    "preset": "", "elements": "", "post": "", "codefile": "", "code": "",
-    "view": "", "sync": "", "bake": "", "play": "", "pin": "",
-    "wand": "", "magic": "", "gear": "", "folderopen": "", "minus": "",
+    "add": "",
+    "delete": "",
+    "copy": "",
+    "paste": "",
+    "camera": "",
+    "refresh": "",
+    "lock": "",
+    "unlock": "",
+    "color": "",
+    "import": "",
+    "export": "",
+    "list": "",
+    "stop": "",
+    "sun": "",
+    "globe": "",
+    "folder": "",
+    "eye": "",
+    "hide": "",
+    "edit": "",
+    "more": "",
+    "close": "",
+    "filter": "",
+    "photo": "",
+    "clock": "",
+    "layers": "",
+    "link": "",
+    "bulb": "",
+    "save": "",
+    "grip": "",
+    "menu": "",
+    "pick": "",
+    "up": "",
+    "down": "",
+    "expand": "",
+    "shrink": "",
+    "fetch": "",
+    "cube": "",
+    "settings": "",
+    "note": "",
+    "check": "",
+    "checklist": "",
+    "cards": "",
+    "cut": "",
+    "select": "",
+    "dup": "",
+    "transfer": "",
+    "text": "",
+    "resolution": "",
+    "image": "",
+    "dome": "",
+    "mountain": "",
+    "wind": "",
+    "swatch": "",
+    "sliders": "",
+    "preset": "",
+    "elements": "",
+    "post": "",
+    "codefile": "",
+    "code": "",
+    "view": "",
+    "sync": "",
+    "bake": "",
+    "play": "",
+    "pin": "",
+    "wand": "",
+    "magic": "",
+    "gear": "",
+    "folderopen": "",
+    "minus": "",
 }
 
 
@@ -79,7 +137,10 @@ def rescale(icon, px):
 def teapot_path(r):
     """A teapot silhouette inside rect r (body, lid with knob, curved spout, ring handle)."""
     x, y, w, h = r.x(), r.y(), r.width(), r.height()
-    P = lambda fx, fy: QtCore.QPointF(x + w * fx, y + h * fy)
+
+    def P(fx, fy):
+        return QtCore.QPointF(x + w * fx, y + h * fy)
+
     path = QtGui.QPainterPath()
     path.addEllipse(QtCore.QRectF(P(0.20, 0.36), P(0.80, 0.88)))
     lid = QtGui.QPainterPath()
@@ -131,7 +192,10 @@ def puzzle_path(r):
     k = 1.35  # the piece spans 0.67 of the drawing below
     x, y, w, h = r.x(), r.y(), r.width() * k, r.height() * k
     ox, oy = r.width() * 0.5 - w * 0.535, r.height() * 0.5 - h * 0.445
-    u = lambda fx, fy: QtCore.QPointF(x + ox + w * fx, y + oy + h * fy)
+
+    def u(fx, fy):
+        return QtCore.QPointF(x + ox + w * fx, y + oy + h * fy)
+
     body = QtGui.QPainterPath()
     body.addRoundedRect(QtCore.QRectF(u(0.20, 0.30), u(0.68, 0.78)), w * 0.05, h * 0.05)
     knob = QtGui.QPainterPath()

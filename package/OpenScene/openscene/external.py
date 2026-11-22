@@ -1,15 +1,28 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Optional compatibility reader: setups that another scene manager keeps inside a .max (the SceneManager_Dat key
 on the root node, base64 JSON), converted to OpenScene setups. Only reads that data, never writes it.
 
 Nothing else depends on this module: deleting it (with its two uses in maxlink.read_setups and the check in
 OpenScene_startup.ms) removes the feature.
 """
+
 import base64
 import json
 import re
 
-from .model import (DEFAULT_HEIGHT, DEFAULT_RATIO, DEFAULT_WIDTH, empty_setup, from_max, layer_entry, new_token,
-                    object_entry)
+from .model import (
+    DEFAULT_HEIGHT,
+    DEFAULT_RATIO,
+    DEFAULT_WIDTH,
+    MAX_SETUPS,
+    MAX_STORED,
+    empty_setup,
+    from_max,
+    layer_entry,
+    new_token,
+    normalize,
+    object_entry,
+)
 
 KEY = "SceneManager_Dat"
 
@@ -57,17 +70,23 @@ def _props_into(card, lst, out):
 
 
 def convert(data, first_id):
-    """Reads the setups another scene manager keeps in SceneManager_Dat (base64 JSON). The original data is left as it is."""
+    """Reads the setups another scene manager keeps in SceneManager_Dat (base64 JSON). The original data is left
+    as it is."""
+    if not isinstance(data, str) or len(data) > MAX_STORED:
+        return None
     try:
         raw = base64.b64decode(data + "=" * (-len(data) % 4))
         lst = json.loads(raw.decode("utf-8"))
-    except Exception:
+    except (ValueError, UnicodeDecodeError):
         return None
     if not isinstance(lst, list):
         return None
     out = []
-    for i, v in enumerate(lst):
-        g = lambda k: v.get(k) or {}
+    for i, v in enumerate([v for v in lst if isinstance(v, dict)][:MAX_SETUPS]):
+
+        def g(k, v=v):
+            return v.get(k) or {}
+
         s = empty_setup(first_id + i)
         s["render"] = _b(g("render").get("enabled"), True)
         c = v.get("color")
@@ -76,34 +95,50 @@ def convert(data, first_id):
         s["scenename"] = g("scenename").get("text") or ""
         s["status"] = v.get("status") or "#WIP"
         cam = g("camera")
-        s["camera"].update(enabled=_b(cam.get("enabled"), True), handle=_h(cam.get("handle")), locked=_b(cam.get("locked"), False))
+        s["camera"].update(
+            enabled=_b(cam.get("enabled"), True), handle=_h(cam.get("handle")), locked=_b(cam.get("locked"), False)
+        )
         _props_into(1, cam.get("props"), s["props"])
         r = g("resolution")
-        s["resolution"].update(enabled=_b(r.get("enabled"), True), width=int(_n(r.get("width"), DEFAULT_WIDTH)),
-                               height=int(_n(r.get("height"), DEFAULT_HEIGHT)), ratio=_n(r.get("ratio"), DEFAULT_RATIO),
-                               locked=_b(r.get("locked"), False))
+        s["resolution"].update(
+            enabled=_b(r.get("enabled"), True),
+            width=int(_n(r.get("width"), DEFAULT_WIDTH)),
+            height=int(_n(r.get("height"), DEFAULT_HEIGHT)),
+            ratio=_n(r.get("ratio"), DEFAULT_RATIO),
+            locked=_b(r.get("locked"), False),
+        )
         for key, card in (("sun", 3), ("dome", 4)):
             x = g(key)
             s[key].update(enabled=_b(x.get("enabled"), False), handle=_h(x.get("handle")))
             _props_into(card, x.get("props"), s["props"])
         e = g("environment")
         mat = e.get("mat") or {}
-        s["environment"].update(enabled=_b(e.get("enabled"), False), cls=mat.get("class") or "", name=mat.get("name") or "")
+        s["environment"].update(
+            enabled=_b(e.get("enabled"), False), cls=mat.get("class") or "", name=mat.get("name") or ""
+        )
         _props_into(6, e.get("props"), s["props"])
         f = g("frames")
-        s["frames"].update(enabled=_b(f.get("enabled"), False), kind=int(_n(f.get("type"), 0)), single=int(_n(f.get("single"), 0)),
-                           start=int(_n(f.get("start"), 0)), end=int(_n(f.get("end"), 100)), nth=int(_n(f.get("nth"), 1)))
+        s["frames"].update(
+            enabled=_b(f.get("enabled"), False),
+            kind=int(_n(f.get("type"), 0)),
+            single=int(_n(f.get("single"), 0)),
+            start=int(_n(f.get("start"), 0)),
+            end=int(_n(f.get("end"), 100)),
+            nth=int(_n(f.get("nth"), 1)),
+        )
         if isinstance(f.get("list"), str):
             s["frames"]["list"] = f["list"]
         s["layers"]["enabled"] = _b(g("layers").get("enabled"), False)
-        for l in g("layers").get("set") or []:
-            ent = layer_entry(l.get("handle") or l.get("name") or "")
-            for p in l.get("props") or []:
+        for layer in g("layers").get("set") or []:
+            ent = layer_entry(layer.get("handle") or layer.get("name") or "")
+            for p in layer.get("props") or []:
                 b = _b(p.get("value"))
                 n = p.get("name")
                 if b is None or n == "name":
                     continue
-                key = {"on": "visible", "isfrozen": "freeze", "renderable": "render", "primaryVisibility": "vcam"}.get(n)
+                key = {"on": "visible", "isfrozen": "freeze", "renderable": "render", "primaryVisibility": "vcam"}.get(
+                    n
+                )
                 if key:
                     ent[key] = b
                 else:
@@ -128,12 +163,12 @@ def convert(data, first_id):
                     ent["extra"][n] = b
             s["objects"]["set"].append(ent)
         s["lights"]["enabled"] = _b(g("lights").get("enabled"), False)
-        for l in g("lights").get("set") or []:
-            h = _h(l.get("handle"))
+        for light in g("lights").get("set") or []:
+            h = _h(light.get("handle"))
             if h is None:
                 continue
             s["lights"]["set"].append(h)
-            for p in l.get("props") or []:
+            for p in light.get("props") or []:
                 if p.get("name") and p.get("name") != "name" and p.get("value") is not None:
                     s["props"]["26|%d|%s" % (h, p["name"])] = p["value"]
         rc = g("renderCustom")
@@ -165,5 +200,5 @@ def convert(data, first_id):
         if toks:
             s["output"]["preset"] = toks
         s["notes"] = g("notes").get("text") or ""
-        out.append(s)
+        out.append(normalize(s))
     return out

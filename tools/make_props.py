@@ -1,7 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Builds openscene/props.json (the Property Selector table) from tools/props_source.py.
 
-    python tools/make_props.py
+python tools/make_props.py
 """
+
 import json
 import os
 import sys
@@ -59,8 +61,14 @@ def tab_props(raw):
             short, long = (disp + [disp[0]])[:2]
         else:
             short = long = disp or p["name"]
-        d = {"name": p["name"], "class": p.get("class", "Float"), "short": short, "long": long,
-             "value": p.get("value"), "enabled": bool(p.get("enabled"))}
+        d = {
+            "name": p["name"],
+            "class": p.get("class", "Float"),
+            "short": short,
+            "long": long,
+            "value": p.get("value"),
+            "enabled": bool(p.get("enabled")),
+        }
         for k in ("min", "max", "step"):
             if p.get(k) is not None:
                 d[k] = p[k]
@@ -74,10 +82,20 @@ def main():
         props = tab_props(TABLES.get(key, []))
         if not props:
             raise SystemExit("no table for %s" % key)
-        tabs.append({"id": cid, "name": name, "cls": cls[0] if cls else None, "classes": cls, "engine": engine,
-                     "v_class": v_class, "props": props})
-    with open(OUT, "w", encoding="utf-8") as f:
-        json.dump(tabs, f, indent=1)
+        tabs.append(
+            {
+                "id": cid,
+                "name": name,
+                "cls": cls[0] if cls else None,
+                "classes": cls,
+                "engine": engine,
+                "v_class": v_class,
+                "props": props,
+            }
+        )
+    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(tabs, f, indent=2)
+        f.write("\n")
     print("wrote %s: %d tabs, %d settings" % (OUT, len(tabs), sum(len(t["props"]) for t in tabs)))
 
 

@@ -1,12 +1,18 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Everything that talks to 3ds Max: reading the scene, applying a setup, storing setups, rendering."""
+
 import json
 import os
 import tempfile
 
-from pymxs import runtime as rt
 import pymxs
+from pymxs import runtime as rt
 
 from . import external, model
+
+# What a call into 3ds Max raises through pymxs: a MAXScript error comes as RuntimeError; a renderer or a property
+# this 3ds Max does not have, as AttributeError or TypeError; a value it cannot take, as ValueError.
+MAX_ERRORS = (RuntimeError, AttributeError, TypeError, ValueError)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CORE = os.path.join(os.path.dirname(HERE), "openscene_core.ms")
@@ -22,6 +28,7 @@ def _none(v):
 
 
 # ---------------------------------------------------------------- scene
+
 
 class Scene(object):
     def __init__(self, data=None):
@@ -43,7 +50,7 @@ class Scene(object):
         self.object_total = d.get("object_total", len(self.objects))
         self.xrefs = d.get("xrefs", [])
         self._cam = {c["handle"]: c for c in self.cameras}
-        self._light = {l["handle"]: l for l in self.lights}
+        self._light = {light["handle"]: light for light in self.lights}
         self._obj = {o["handle"]: o for o in self.objects}
 
     @property
@@ -81,13 +88,13 @@ class Scene(object):
         return [m for m in self.maps if m.get("offer", True) or (m["class"], m["name"]) in keep]
 
     def suns(self):
-        return [l for l in self.lights if l["kind"] == "sun"]
+        return [light for light in self.lights if light["kind"] == "sun"]
 
     def domes(self):
-        return [l for l in self.lights if l["kind"] == "dome"]
+        return [light for light in self.lights if light["kind"] == "dome"]
 
     def other_lights(self):
-        return [l for l in self.lights if l["kind"] == "light"]
+        return [light for light in self.lights if light["kind"] == "light"]
 
     def find_by_name(self, items, name):
         for it in items:
@@ -100,7 +107,7 @@ def read_scene_raw(handles=None):
     """The scene as JSON text; objects only for `handles` (the ones the setups use)."""
     try:
         rt.oscn_sceneRead()  # the next #scene event goes to Python again
-    except Exception:
+    except MAX_ERRORS:
         pass
     return str(rt.oscn_scene(objHandles=sorted(int(h) for h in (handles or []))))
 
@@ -116,23 +123,34 @@ def nodes_info(handles):
     return json.loads(str(rt.oscn_nodesInfo([int(h) for h in handles])), strict=False)
 
 
-def resolve(setup, scene):
-    """Handles change when a scene is merged or nodes are re-created: fall back to the stored name."""
-    for key, items in (("camera", scene.cameras), ("sun", scene.lights), ("dome", scene.lights)):
-        for c in model.entries(setup[key]):
-            h = c.get("handle")
-            found = None
-            if h is not None:
-                found = next((x for x in items if x["handle"] == h), None)
-            if found is None and c.get("name"):
-                found = scene.find_by_name(items, c["name"])
-                if found is not None:
-                    c["handle"] = found["handle"]
-            if found is not None:
-                c["name"] = found["name"]
+def resolve_nodes(query):
+    """Where the referenced nodes are now (oscn_resolveNodes): [(handle, name)]; -1 missing, -2 another node."""
+    if not query:
+        return []
+    return [(int(r[0]), str(r[1])) for r in rt.oscn_resolveNodes(query)]
+
+
+def stamp_nodes(handles):
+    """The lasting ID of each of these nodes, made when one has none; "" for a missing node."""
+    return [str(u) for u in rt.oscn_stampNodes([int(h) for h in handles])] if handles else []
+
+
+def stamp_layers(names):
+    return [str(u) for u in rt.oscn_stampLayers(list(names))] if names else []
+
+
+def layer_uids():
+    """{uid: name now} of every layer that has an ID."""
+    out = {}
+    for line in str(rt.oscn_layerUids()).splitlines():
+        uid, _, name = line.partition("|")
+        if uid:
+            out[uid] = name
+    return out
 
 
 # ---------------------------------------------------------------- values
+
 
 def _value(prop, v):
     """Stored value -> what the change list carries (hashable). Colors, maps and tone-mapping
@@ -182,12 +200,13 @@ def _to_max(v):
 
 # ---------------------------------------------------------------- tone-mapping chains (Corona colour mapping operators)
 
+
 def read_pipeline(obj, prop):
     """The chain of operators in obj.prop as a list of {"class", "props"} (texture inputs are left out)."""
     out = []
     try:
         op = rt.getProperty(obj, prop)
-    except Exception:
+    except MAX_ERRORS:
         return out
     guard = 0
     while op is not None and guard < 64:
@@ -198,7 +217,7 @@ def read_pipeline(obj, prop):
             n = str(n)
             try:
                 v = rt.getProperty(op, n)
-            except Exception:
+            except MAX_ERRORS:
                 continue
             if n.endswith("_nextOperator"):
                 nxt = v
@@ -212,25 +231,50 @@ def read_pipeline(obj, prop):
     return out
 
 
+def new_operator(cls):
+    """A new Corona colour-mapping operator of this class, or None: the class name comes from a setup, so it must be
+    an operator's plain name, and it is looked up among 3ds Max's classes, never run as code."""
+    if not model.is_tone_operator(cls):
+        print("OpenScene: refused a tone-mapping operator of class %r (not an operator's name)" % (cls,))
+        return None
+    c = getattr(rt, cls, None)
+    if c is None or str(rt.classOf(c)) != "MAXClass":
+        print("OpenScene: this 3ds Max has no tone-mapping operator %s" % cls)
+        return None
+    return c()
+
+
+def set_operator_props(op, cls, props):
+    """The values a setup stores for an operator: plain names and plain values only, never the link to the next one."""
+    for n, v in (props or {}).items():
+        if not model.is_plain_name(n) or n.endswith("_nextOperator"):
+            print("OpenScene: refused the setting %r of a %s" % (n, cls))
+            continue
+        if isinstance(v, dict) and "$color" in v:
+            try:
+                v = rt.Color(*[float(x) for x in v["$color"]][:3])
+            except (TypeError, ValueError):
+                continue
+        elif not model.is_scalar(v):
+            continue
+        try:
+            rt.setProperty(op, n, v)
+        except Exception as ex:  # noqa: BLE001 - one setting 3ds Max refuses must not stop the others; said here
+            print("OpenScene: %s.%s -> %s" % (cls, n, ex))
+
+
 def write_pipeline(obj, prop, chain):
     first = None
     prev = None
     for item in chain:
-        try:
-            op = rt.execute("%s()" % item["class"])
-        except Exception:
+        op = new_operator(item.get("class"))
+        if op is None:
             continue
-        for n, v in item.get("props", {}).items():
-            try:
-                if isinstance(v, dict) and "$color" in v:
-                    v = rt.Color(*v["$color"])
-                rt.setProperty(op, n, v)
-            except Exception:
-                pass
+        set_operator_props(op, item["class"], item.get("props"))
         if prev is not None:
             try:
                 rt.setProperty(prev, "colorMappingOperator_nextOperator", op)
-            except Exception:
+            except MAX_ERRORS:
                 pass
         first = first or op
         prev = op
@@ -238,6 +282,7 @@ def write_pipeline(obj, prop, chain):
 
 
 # ---------------------------------------------------------------- Post-Production / VFB (Corona)
+
 
 def _live_operators():
     ops = []
@@ -263,10 +308,15 @@ def read_post(key, only_active=False):
         return {"ops": ops}
     if key == "lightmix":
         arrays = {}
-        for name in ("colorMap_lightmixIntensities", "colorMap_lightmixColors", "colorMap_lightmixEnabledLayers", "colormap_lightselect_elementNames"):
+        for name in (
+            "colorMap_lightmixIntensities",
+            "colorMap_lightmixColors",
+            "colorMap_lightmixEnabledLayers",
+            "colormap_lightselect_elementNames",
+        ):
             try:
                 vals = list(rt.getProperty(r, name) or [])
-            except Exception:
+            except MAX_ERRORS:
                 continue
             if name == "colorMap_lightmixColors":
                 vals = [[float(c.r), float(c.g), float(c.b)] for c in vals]
@@ -283,7 +333,11 @@ def read_post(key, only_active=False):
         if not (isinstance(v, str) and v == "<none>"):
             props[n] = v
     if only_active:
-        switches = [n for n in names if isinstance(props.get(n), bool) and n.endswith(("_enabled", "_enable", "_on", "_blendEnabled"))]
+        switches = [
+            n
+            for n in names
+            if isinstance(props.get(n), bool) and n.endswith(("_enabled", "_enable", "_on", "_blendEnabled"))
+        ]
         if not any(props.get(n) for n in switches):
             return None
     return {"props": props} if props else None
@@ -297,9 +351,8 @@ def apply_tone(chain):
     for item in chain:
         op = next((o for o in live if str(rt.classOf(o)) == item["class"] and o not in used), None)
         if op is None:
-            try:
-                op = rt.execute("%s()" % item["class"])
-            except Exception:
+            op = new_operator(item.get("class"))
+            if op is None:
                 continue
             if live:
                 rt.setProperty(live[-1], "colorMappingOperator_nextOperator", op)
@@ -307,42 +360,41 @@ def apply_tone(chain):
                 rt.setProperty(rt.renderers.current, "colorMap_pipeline", op)
             live.append(op)
         used.append(op)
-        for n, v in item.get("props", {}).items():
-            try:
-                if isinstance(v, dict) and "$color" in v:
-                    v = rt.Color(*v["$color"])
-                rt.setProperty(op, n, v)
-            except Exception as ex:
-                print("OpenScene: %s.%s -> %s" % (item["class"], n, ex))
+        set_operator_props(op, item["class"], item.get("props"))
     for op in live:
         if op not in used:
             try:
                 rt.setProperty(op, "colorMappingOperator_enabled", False)
-            except Exception:
+            except MAX_ERRORS:
                 pass
 
 
 def apply_lightmix(arrays):
     r = rt.renderers.current
     for name, vals in arrays.items():
-        if name == "colormap_lightselect_elementNames":
+        if name not in model.LIGHTMIX_ARRAYS or not isinstance(vals, list):
+            if name != "colormap_lightselect_elementNames":
+                print("OpenScene: refused the LightMix setting %r" % (name,))
             continue
         if name == "colorMap_lightmixColors":
             vals = [rt.Color(*c) for c in vals]
         try:
             rt.setProperty(r, name, vals)
-        except Exception as ex:
+        except MAX_ERRORS as ex:
             print("OpenScene: %s -> %s" % (name, ex))
 
 
 # ---------------------------------------------------------------- what a setup does
 
-def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=None):
+
+def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=None, refused=None):
     """The list of changes a setup makes, in order. `enabled(card)` gives the ticked (tab, prop) pairs.
-    opts: settings of the window (viewport mode, time output type...)."""
+    opts: settings of the window (viewport mode, time output type...). What the setup carries that a setup may not
+    set (a name that is not a plain name...) is left out and named in `refused`, when it is a list."""
     opts = opts or {}
     out = []
     props = s.get("props", {})
+    refused = refused if refused is not None else []
 
     def stored(card, tab, p):
         return props.get("%d|%s|%s" % (card, tab["v_class"], p["name"]))
@@ -354,16 +406,30 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
     if rp.get("enabled") and rp.get("path"):
         out.append(("preset", rp["path"]))
     ro = s.get("rs_override", {})
-    if ro.get("enabled") and (rs_default or ro.get("set")):
+    over = ro.get("set") if isinstance(ro.get("set"), dict) else {}
+    if ro.get("enabled") and (rs_default or over):
         for k, v in sorted((rs_default or {}).items()):
-            if k not in ro.get("set", {}):
+            if k not in over and model.renderer_value_ok(k, v):
                 out.append(("rs", k, v))
-        for k, v in sorted(ro.get("set", {}).items()):
-            out.append(("rs", k, v))
+        for k, v in sorted(over.items()):
+            if model.renderer_value_ok(k, v):
+                out.append(("rs", k, v))
+            else:
+                refused.append("Render Override: %s" % (k,))
     f = s["frames"]
     if f["enabled"]:
-        out.append(("time", int(f["kind"]), int(f["single"]), int(f["start"]), int(f["end"]), max(1, int(f["nth"])),
-                    f["list"], bool(rendering or opts.get("update_time_output_type"))))
+        out.append(
+            (
+                "time",
+                int(f["kind"]),
+                int(f["single"]),
+                int(f["start"]),
+                int(f["end"]),
+                max(1, int(f["nth"])),
+                f["list"],
+                bool(rendering or opts.get("update_time_output_type")),
+            )
+        )
     if s["render_custom"]["enabled"]:
         for t, p in enabled(25):
             v = stored(25, t, p)
@@ -373,7 +439,9 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
         out.append(("renderview",))
     c = s["camera"]
     if c["enabled"] and c.get("handle") is not None:
-        out.append(("camera", c["handle"], bool(c["locked"]), 2 if rendering else int(opts.get("viewport_update_type", 0))))
+        out.append(
+            ("camera", c["handle"], bool(c["locked"]), 2 if rendering else int(opts.get("viewport_update_type", 0)))
+        )
         cam = scene.camera(c["handle"])
         cls = cam["class"] if cam else None
         for t, p in enabled(1):
@@ -388,27 +456,37 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
     if sun["enabled"]:
         suns = model.entries(sun)
         # the suns of the scene go in too: a sun added later is switched off as soon as the scene is read again
-        out.append(("sun", tuple(int(x["handle"]) for x in suns if x.get("handle") is not None),
-                    tuple(sorted(int(l["handle"]) for l in scene.suns()))))
+        out.append(
+            (
+                "sun",
+                tuple(int(x["handle"]) for x in suns if x.get("handle") is not None),
+                tuple(sorted(int(light["handle"]) for light in scene.suns())),
+            )
+        )
         for i, en in enumerate(suns):
             h = en.get("handle")
             if h is None:
                 continue
-            l = scene.light(h)
+            light = scene.light(h)
             store = props if i == 0 else en.get("props", {})
-            classes = model.light_tabs_classes(l)
+            classes = model.light_tabs_classes(light)
             for t, p in enabled(3):
                 if any(model.tab_matches(t, c) for c in classes):
                     v = store.get("3|%s|%s" % (t["v_class"], p["name"]))
                     if v is not None:
-                        out.append(("node", h, model.light_prop(l, t, p), _value(p, v)))
+                        out.append(("node", h, model.light_prop(light, t, p), _value(p, v)))
     dome = s["dome"]
     if dome["enabled"]:
-        out.append(("dome", (int(dome["handle"]),) if dome.get("handle") is not None else (),
-                    tuple(sorted(int(l["handle"]) for l in scene.domes()))))
+        out.append(
+            (
+                "dome",
+                (int(dome["handle"]),) if dome.get("handle") is not None else (),
+                tuple(sorted(int(light["handle"]) for light in scene.domes())),
+            )
+        )
         if dome.get("handle") is not None:
-            l = scene.light(dome["handle"])
-            cls = l["class"] if l else None
+            light = scene.light(dome["handle"])
+            cls = light["class"] if light else None
             for t, p in enabled(4):
                 if model.tab_matches(t, cls):
                     v = stored(4, t, p)
@@ -431,7 +509,7 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
             if not mm:
                 continue
             store = props if i == 0 else en.get("props", {})
-            for t, p, link, key_cls in model.env_rows(mm, enabled(6)):
+            for _tab, p, link, key_cls in model.env_rows(mm, enabled(6)):
                 v = store.get("6|%s|%s" % (key_cls, p["name"]))
                 if v is not None:
                     out.append(("map", link["class"], link["name"], p["name"], _value(p, v)))
@@ -442,27 +520,37 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
         if output_path and rendering:
             out.append(("mkdir", output_path))
         out.append(("output", output_path))
+    va = s.get("variants", {})
+    # a variant decides whether its layers are on, so the Layers card leaves that out for them: with both, an edit of
+    # the Layers card alone would be the only new change the window sends, and it would win over the variant
+    by_variant = set()
+    if va.get("enabled"):
+        by_variant = {n for vs in va.get("set", []) for n in vs.get("layers", []) if isinstance(n, str)}
     if s["layers"]["enabled"]:
-        for l in s["layers"]["set"]:
+        for layer in s["layers"]["set"]:
             for _, p in enabled(14):
                 if p["class"] != "BooleanClass":
                     continue
                 n = p["name"]
+                if n == "on" and layer["name"] in by_variant:
+                    continue
                 if n == "on":
-                    v = l["visible"]
+                    v = layer["visible"]
                 elif n == "isfrozen":
-                    v = l["freeze"]
+                    v = layer["freeze"]
                 elif n == "renderable":
-                    v = l["render"]
+                    v = layer["render"]
                 elif n == "primaryVisibility":
-                    v = l["vcam"]
-                elif n in l.get("extra", {}):
-                    v = l["extra"][n]
+                    v = layer["vcam"]
+                elif n in layer.get("extra", {}):
+                    v = layer["extra"][n]
                 else:
                     continue
-                out.append(("layer", l["name"], n, bool(v)))
+                out.append(("layer", layer["name"], n, bool(v)))
     if s["objects"]["enabled"]:
         for o in s["objects"]["set"]:
+            if o.get("handle") is None:
+                continue  # its node is not found in this scene (yet)
             for _, p in enabled(23):
                 if p["class"] != "BooleanClass":
                     continue
@@ -489,12 +577,12 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
     if at.get("enabled"):
         for a in at.get("set", []):
             out.append(("atmos", a["name"], bool(a.get("active", True))))
-    va = s.get("variants", {})
     if va.get("enabled"):
         for vs in va.get("set", []):
             pick = int(vs.get("value", 1))
             for i, name in enumerate(vs.get("layers", [])):
-                out.append(("layer", name, "on", i + 1 == pick))
+                if isinstance(name, str):
+                    out.append(("layer", name, "on", i + 1 == pick))
     el = s.get("elements", {})
     if el.get("enabled"):
         for x in el.get("set", []):
@@ -513,7 +601,10 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
                     out.append(("postlm", json.dumps(c.get("arrays", {}), sort_keys=True)))
                 else:
                     for k, v in sorted(c.get("props", {}).items()):
-                        out.append(("rs", k, v))
+                        if model.post_setting_ok(key, k) and model.is_scalar(v):
+                            out.append(("rs", k, v))
+                        else:
+                            refused.append("Post-Production: %s" % (k,))
         elif po.get("conf") or po.get("lightmix"):  # stored by an older version
             out.append(("post", po.get("conf", ""), json.dumps(po.get("lightmix") or {}, sort_keys=True)))
     if s["xref"]["enabled"]:
@@ -540,18 +631,18 @@ def run(acts, redraw=True):
         dialog_open = bool(rt.renderSceneDialog.isOpen())
         if dialog_open:
             rt.renderSceneDialog.commit()
-    except Exception:
+    except MAX_ERRORS:
         pass
     with pymxs.undo(False):
         for a in acts:
             try:
                 _run_one(a)
-            except Exception as ex:  # one bad setting must not stop the rest
+            except Exception as ex:  # noqa: BLE001 - one bad setting must not stop the rest; it is printed in the Listener
                 print("OpenScene: %s -> %s" % (str(a)[:160], ex))
     if dialog_open:
         try:
             rt.renderSceneDialog.update()
-        except Exception:
+        except MAX_ERRORS:
             pass
     if redraw:
         rt.redrawViews()
@@ -607,7 +698,7 @@ def _run_one(a):
     elif k == "element":
         rt.oscn_setElement(a[1], a[2])
     elif k == "preset":
-        rt.oscn_loadPreset(a[1])
+        load_preset(a[1])
     elif k == "post":
         if a[1]:
             path = os.path.join(tempfile.gettempdir(), "oscn_post.conf")
@@ -615,11 +706,7 @@ def _run_one(a):
                 fh.write(a[1])
             rt.oscn_postLoad(path)
         lm = json.loads(a[2]) if a[2] else {}
-        for name, v in lm.items():
-            try:
-                rt.setProperty(rt.renderers.current, name, v)
-            except Exception:
-                pass
+        apply_lightmix(lm if isinstance(lm, dict) else {})
     elif k == "posttone":
         apply_tone(json.loads(a[1]))
     elif k == "postlm":
@@ -656,7 +743,7 @@ def read_special(kind, a, prop, cls):
             return "#%02x%02x%02x" % (int(v.r), int(v.g), int(v.b))
         if cls == "Texturemap":
             return "" if v is None else "%s|%s" % (rt.classOf(v), v.name)
-    except Exception:
+    except MAX_ERRORS:
         return None
     return None
 
@@ -666,6 +753,7 @@ def texmaps():
 
 
 # ---------------------------------------------------------------- storage inside the .max file
+
 
 def save_setups(text):
     rt.oscn_saveSetups(text)
@@ -691,6 +779,7 @@ def read_setups(first_id):
 
 # ---------------------------------------------------------------- module helpers
 
+
 def atmospherics():
     return json.loads(str(rt.oscn_atmospherics()))
 
@@ -705,6 +794,36 @@ def rs_snapshot():
 
 def save_preset(path):
     return bool(rt.oscn_savePreset(path))
+
+
+def _same_scripts(a, b):
+    """Render Setup's scripts compared as Windows compares paths: the two switches and the two files."""
+
+    def plain(v):
+        return [
+            bool(v[0]),
+            os.path.normcase(os.path.normpath(str(v[1] or ""))),
+            bool(v[2]),
+            os.path.normcase(os.path.normpath(str(v[3] or ""))),
+        ]
+
+    return plain(a) == plain(b)
+
+
+def load_preset(path):
+    """The one place where OpenScene loads a render preset. A preset brings render settings only: Render Setup's own
+    pre- and post-render scripts, which a .rps file keeps too, are read before the load and put back after it,
+    whatever the preset holds and also when the load fails."""
+    kept = list(rt.oscn_renderSetupScripts())
+    try:
+        return bool(rt.oscn_loadPreset(path))
+    finally:
+        rt.oscn_setRenderSetupScripts(kept)
+        if not _same_scripts(list(rt.oscn_renderSetupScripts()), kept):
+            print(
+                "OpenScene: Render Setup's scripts could not be put back after loading %s: check Render Setup > "
+                "Common > Scripts before rendering" % path
+            )
 
 
 def run_code(code):
@@ -726,21 +845,21 @@ def batch_view(cam, name, state, preset, out, w, h):
 def interactive_running():
     try:
         return int(rt.oscn_isRendering()) != 0
-    except Exception:
+    except MAX_ERRORS:
         return False
 
 
 def interactive_stop():
     try:
         rt.CoronaRenderer.CoronaFp.stopRender()
-    except Exception:
+    except MAX_ERRORS:
         pass
 
 
 def interactive_start():
     try:
         rt.CoronaRenderer.CoronaFp.startInteractive()
-    except Exception:
+    except MAX_ERRORS:
         pass
 
 
@@ -748,7 +867,7 @@ def viewport_camera():
     try:
         c = rt.viewport.getCamera()
         return None if c is None else int(c.inode.handle)
-    except Exception:
+    except MAX_ERRORS:
         return None
 
 
@@ -757,6 +876,7 @@ def save_copy(path):
 
 
 # ---------------------------------------------------------------- misc
+
 
 def new_hdri(path):
     return json.loads(str(rt.oscn_newHdri(path)))
@@ -800,6 +920,15 @@ def render():
     return str(rt.oscn_render())
 
 
+def render_output():
+    """The file the next render saves to, or "" when 3ds Max is set not to save one."""
+    try:
+        name = str(rt.rendOutputFilename or "")
+        return name if (bool(rt.rendSaveFile) and name) else ""
+    except MAX_ERRORS:
+        return ""
+
+
 def stop_render():
     rt.oscn_stop()
 
@@ -820,8 +949,9 @@ def watch(callback):
 def main_window():
     try:
         import qtmax
+
         return qtmax.GetQMaxMainWindow()
-    except Exception:
+    except (ImportError, AttributeError, RuntimeError):
         return None
 
 

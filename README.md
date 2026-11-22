@@ -1,93 +1,97 @@
 # OpenScene
 
-Gestor de *setups* (estados de escena) y render por lotes que vive **dentro de 3ds Max 2025+**
-(Python + PySide6 que ya trae Max, más una librería MAXScript). Sin programas aparte ni navegador.
+Scene setups and batch rendering for 3ds Max. A **setup** keeps, inside the `.max` file, what one shot of the scene
+needs: camera, resolution, frames, sun, dome, environment, layers, objects, lights, XRefs, output path, render
+settings, Corona VFB post-production and more. Click a setup and the scene follows; **Batch Render** renders every
+ticked setup, one after the other. A plug-in that lives inside **3ds Max**, written in Python (the Python and Qt that
+come with 3ds Max) and MAXScript: no separate program and no account.
 
-Un **setup** guarda, para un mismo `.max`: cámara, resolución, frames, sol, domo, entorno, capas, objetos,
-luces, xrefs, ruta de salida, ajustes de render, post-producción del VFB (Corona) y más. Al clicar un setup
-se aplica a la escena; el **Batch Render** (la tetera) renderiza todos los marcados.
+> Status: early (v3.0.0).
+> What each version adds: [CHANGELOG.md](CHANGELOG.md).
 
-Versión **2.2.2** · probado en 3ds Max 2026.3 con Corona 14 (V-Ray / FStorm: tablas incluidas, menos probados).
+**3ds Max:** 2025 or newer, on Windows. Version 2.x was used on 3ds Max 2026.3 with Corona 14. Version 3.0.0 has not
+been through the real test in 3ds Max yet, so no version is listed as tested; 2025, 2026 and 2027 should work.
 
-## Instalar
+**Renderers:** Corona (every card), V-Ray and V-Ray GPU (tables included); FStorm, Redshift and Arnold with less
+testing.
 
-1. Descarga **`OpenScene.mzp`** y arrástralo a un visor de 3ds Max.
-2. El instalador pone el botón en una barra de herramientas nueva, **OpenScene**: arrástrala a donde quieras.
-   Si ya tenías el botón en alguna barra, no se añade otra. (También está en *Customize > Customize User Interface*,
-   **Group: Main UI**, **Category: OpenScene**, para ponerlo en otra barra o en un menú.)
+## Install
 
-Para quitarlo: *Scripting > Run Script…* > `uninstall.ms` y reinicia Max. Los setups guardados en los
-`.max` no se tocan.
+The easy way, once OpenScene is in the [Open3D Launcher](https://github.com/Open3D-Suite/Open3D-Launcher/releases/latest):
+click **Install** next to OpenScene, with 3ds Max closed. It puts OpenScene in `%APPDATA%\Autodesk\ApplicationPlugins`
+as a plug-in bundle (every 3ds Max from 2025 on loads it), tells you when a new version is out and updates it.
 
-- Los setups se guardan **dentro del .max** (atributo de `rootNode`).
-- Si un `.max` trae setups guardados por otro gestor de escenas, OpenScene los lee y los convierte; desde que el archivo
-  se guarda con los suyos, ya no se pregunta más.
-- Presets de setups y de salida: archivos `.osp` (también se abren los `.smp` exportados antes).
-- Ajustes de la ventana: `plugcfg\OpenScene.json`.
+By hand: each release of this repository has the bundle as a zip, `openscene-<version>-windows-x64-3dsmax.zip`. With
+3ds Max closed, unzip it, copy the `OpenScene.bundle` folder into `%APPDATA%\Autodesk\ApplicationPlugins\` and start
+3ds Max. To remove it, delete that folder with 3ds Max closed.
 
-## Módulos
+- The first start adds an **OpenScene** toolbar with the button, floating: drag it where you want it. Nothing is added
+  when a toolbar already has the button. The action is also in *Customize > Customize User Interface*, **Group: Main
+  UI**, **Category: OpenScene**, to put it on another toolbar or in a menu.
+- The **`.mzp` is retired**: versions up to 2.2.2 came as `OpenScene.mzp`. If OpenScene was installed with it, the
+  first start of the bundle removes that copy (your settings stay and are carried over).
+- Setups are saved **inside the `.max` file** (the `OpenScene_Dat` attribute of the root node). Installing or removing
+  OpenScene never touches them.
 
-Scene Name, Camera, Resolution, Time Output, Sun (varios soles/Daylights en pestañas), Lights,
-HDRI Browser, Environment (varios HDRI/cielos mezclados como un LightMix), Dome, Background,
-Atmosphere, Layers, Objects, XRef Scenes, Variants, Render Output, Render Settings, Render Override, Render Preset,
-Render Elements, Post-Production / VFB (Corona), Script File, Script Editor, Thumbnail, Todo y Notes.
-Cada ajuste se elige en el **Selector de propiedades** y tiene un lápiz para tomar el valor de la escena.
+OpenScene keeps its settings in `%APPDATA%\Open3D\OpenScene` (one set for every 3ds Max) and everything else it
+writes (HDRI previews, the backup of the interface file made before the toolbar is added, the thumbnails, exports and
+presets of a scene not saved yet) in `%LOCALAPPDATA%\Open3D\OpenScene`; delete those folders too for a clean removal.
+Version 2.x kept its settings in the `plugcfg` folder of each 3ds Max: the first start copies them, and the HDRI
+previews, and leaves the old ones as they were.
 
-- **Layers y Objects comparten la lista entre setups**: lo que añades en uno aparece en todos, y cada setup guarda
-  sus propias casillas (oculto en uno, visible en otro). Una fila a medio marcar es de la lista pero ese setup aún no
-  la fija; al marcarla, se fija. Quitar una fila la quita de todos.
-- **Doble clic en la barra de color** de una tarjeta: se pliega y queda solo la barra; otro doble clic la despliega al tamaño que tenía.
-- **Tamaño de iconos** (la tuerca > Theme > Icon Size): pequeño, mediano (recomendado) o grande; se aplica al momento.
+## Use
 
-## Compilar el .mzp
+Open it with the **OpenScene** button. Make a setup with **+** (empty), the camera button (the scene as it is now) or
+one per camera, switch on the cards you need, and set what each one changes. Click another setup to apply it.
 
-```
-python tools/build.py
-```
+**Cards:** Scene Name, Camera, Resolution, Time Output, Sun (several suns or Daylights in tabs), Lights, HDRI
+Browser, Environment (several HDRIs or skies mixed like a LightMix), Dome, Background, Atmosphere, Layers, Objects,
+XRef Scenes, Variants, Render Output, Render Settings, Render Override, Render Preset, Render Elements,
+Post-Production / VFB (Corona), Script File, Script Editor, Thumbnail, Todo and Notes. Each setting is picked in the
+**Property Selector**, and its pencil takes the value from the scene.
 
-Python 3 normal, sin dependencias. Primero revisa los archivos MAXScript (`tools/check_ms.py`: palabras reservadas
-usadas como nombres y caracteres de escape no válidos, errores que 3ds Max solo muestra al ejecutar el script) y, si
-están bien, dibuja los iconos (`package/icons/`) y rehace `OpenScene.mzp`.
-`python tools/make_props.py` regenera `props.json` (la tabla del Selector de propiedades) desde `tools/props_source.py`:
-ahí están, para cada motor, los ajustes que ofrece cada tarjeta, con sus nombres, rangos y valores por defecto.
+- **Layers and Objects share one list across setups**: a row added in one setup is in all of them, and each setup
+  keeps its own ticks (hidden in one, visible in another). A half-ticked row is on the list but this setup does not
+  set it yet; ticking it does. Removing a row removes it from every setup.
+- **A setup changes only what its cards set**: what it does not set stays as the previous setup left it.
+- **Scripts and render presets that come inside a file** (the Script Editor, Script File and Render Preset cards of a
+  `.max` made elsewhere) are shown and asked about before they run, with **No** as the answer Enter gives. What you
+  write or choose in OpenScene on this computer runs without asking.
+- Setups another scene manager saved in a `.max` are read and converted; once the file is saved with OpenScene's own,
+  nothing is asked again.
+- Setup and output presets are `.osp` files (`.smp` files exported earlier open too).
+- **Double-click a card's colour bar** to fold it to the bar; again to unfold it.
 
-Para probar cambios sin reinstalar: copia `package/OpenScene/` sobre la instalada
-(`scripts\OpenScene`) y en el Listener de Python: `import openscene; openscene.reload_package()`.
+The interface is in English only.
 
-## Estructura
+## If something goes wrong
 
-| ruta | qué es |
-|---|---|
-| `OpenScene.mzp` | el instalador ya compilado |
-| `uninstall.ms` | desinstalador |
-| `LICENSE` | licencia MIT (va también dentro del .mzp) |
-| `CHANGELOG.md` | qué cambia en cada versión |
-| `CLAUDE.md` | notas para trabajar en el código con Claude |
-| `package/install.ms`, `mzp.run`, `OpenScene.mcr` | instalador y botón de Max |
-| `package/OpenScene/openscene_core.ms` | funciones MAXScript que leen y cambian la escena |
-| `package/OpenScene/OpenScene_startup.ms` | aviso al abrir un `.max` con setups de otro gestor, para convertirlos |
-| `package/OpenScene/openscene/` | la ventana (Python): `window.py`, tarjetas en `cards.py` / `cards2.py`, `maxlink.py` (setup → cambios en Max), `model.py` (datos, sin Max ni Qt), `external.py` (lee los setups de otro gestor, opcional) |
-| `tools/` | `build.py` (genera el .mzp), `check_ms.py` (revisa los MAXScript), `props_source.py` + `make_props.py` (generan `props.json`) |
+Copy what the **MAXScript Listener** (F11) shows: OpenScene's lines start with `OpenScene`.
 
-## Si algo falla
+Known limits are in [docs/audit.md](docs/audit.md). Post-Production / VFB works with Corona only, and so does the
+`.cxr` output (render elements and the LightMix go inside the one `.cxr`).
 
-Copia lo que salga en el **MAXScript Listener** (F11): los errores llevan el prefijo `OpenScene`.
+## Development
 
-## Límites
+- `package/OpenScene/` is what goes in the bundle: the Python package `openscene/`, the MAXScript library
+  `openscene_core.ms` and the file-open check `OpenScene_startup.ms`. `package/OpenScene.mcr` is the macro and
+  `bundle/openscene_bundle.ms` the bundle's start-up script.
+- `python tools/build.py` writes `dist/OpenScene.bundle` (plain Python 3, nothing to install): it checks the MAXScript
+  files (`tools/check_ms.py`), draws the icons and writes `PackageContents.xml` with the version.
+- `tools\check.ps1` runs every check: it needs Python 3.11 or newer and the ruff that `ruff.toml` names. The tests
+  need no 3ds Max: `python -I tests/run.py`.
+- `python -I tools/repo.py package` runs the checks, builds the bundle and writes the release zip to `dist/`.
+- `python tools/make_props.py` writes `props.json`, the tables of the Property Selector, from `tools/props_source.py`.
+- What the security review needs: [docs/security-review.md](docs/security-review.md).
 
-- Post-Production / VFB solo con Corona.
-- Salida **.cxr** (Render Output): solo con Corona. Los render elements y el LightMix van dentro del .cxr, así que no se
-  guarda un archivo aparte por elemento. Con otro motor la ruta se marca en naranja y no se guarda.
-- Los setups grandes se guardan comprimidos en el .max.
-- Ver `AUDITORIA.md` para los límites con escenas grandes y las mejoras pendientes.
+## License
 
-## Licencia y marcas
+Copyright (C) 2026 Daniel Castellanos and OpenScene contributors.
 
-[MIT](LICENSE) © 2026 Daniel Castellanos. Puedes usarlo, modificarlo y redistribuirlo, también en proyectos
-comerciales, siempre que mantengas el aviso de copyright y la licencia. Se ofrece tal cual, sin garantías.
+OpenScene is free software under the GNU General Public License, version 3 or later (`GPL-3.0-or-later`). See
+[`LICENSE`](LICENSE). Versions up to 2.2.2 were published under the MIT licence; copies of those keep it.
 
-OpenScene es un proyecto independiente: no está afiliado, patrocinado ni respaldado por Autodesk, Chaos ni ningún otro
-fabricante. 3ds Max es una marca de Autodesk, Inc.; Corona y V-Ray son marcas de Chaos Software; FStorm, Redshift,
-Arnold y el resto de nombres de productos pertenecen a sus dueños y se citan solo para indicar con qué funciona.
-Los iconos de la interfaz se dibujan en tiempo de ejecución con la fuente de símbolos que trae Windows (no se
-redistribuye) y con formas propias.
+OpenScene is an independent project, not affiliated with, sponsored or endorsed by Autodesk, Chaos or any other
+maker. 3ds Max is a trademark of Autodesk, Inc.; Corona and V-Ray are trademarks of Chaos Software; FStorm, Redshift,
+Arnold and the other product names belong to their owners and are named only to say what OpenScene works with. The
+icons of the interface are drawn at run time with Windows' own symbol font (not redistributed) and shapes of its own.

@@ -1,4 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Reusable pieces of the window: on/off switch, card frame, number row, and the grid board."""
+
 import copy
 import math
 
@@ -7,15 +9,45 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from . import grid, icons, model
 
 TINTS = {
-    "lavender": "#9ca7d5", "yellow": "#ffba0a", "blue": "#48cae4", "green": "#3fdfac",
-    "orange": "#ff925b", "teal": "#77bfb2", "purple": "#6960af", "gold": "#ffd66d", "sky": "#89daff",
+    "lavender": "#9ca7d5",
+    "yellow": "#ffba0a",
+    "blue": "#48cae4",
+    "green": "#3fdfac",
+    "orange": "#ff925b",
+    "teal": "#77bfb2",
+    "purple": "#6960af",
+    "gold": "#ffd66d",
+    "sky": "#89daff",
 }
 PRIMARY = "#289ad3"
 CARD_GLYPH = {
-    0: "list", 1: "camera", 2: "photo", 7: "clock", 15: "edit", 3: "sun", 26: "bulb", 28: "image", 6: "globe",
-    4: "dome", 8: "mountain", 20: "wind", 14: "layers", 23: "cube", 16: "link", 30: "swatch", 9: "save",
-    25: "settings", 19: "sliders", 18: "preset", 21: "elements", 29: "post", 17: "codefile", 22: "code",
-    31: "eye", 13: "checklist", 12: "note",
+    0: "list",
+    1: "camera",
+    2: "photo",
+    7: "clock",
+    15: "edit",
+    3: "sun",
+    26: "bulb",
+    28: "image",
+    6: "globe",
+    4: "dome",
+    8: "mountain",
+    20: "wind",
+    14: "layers",
+    23: "cube",
+    16: "link",
+    30: "swatch",
+    9: "save",
+    25: "settings",
+    19: "sliders",
+    18: "preset",
+    21: "elements",
+    29: "post",
+    17: "codefile",
+    22: "code",
+    31: "eye",
+    13: "checklist",
+    12: "note",
 }
 HEADER_ICON = 15
 HEADER_HEIGHT = 30
@@ -47,8 +79,11 @@ def is_dark():
 
 def blend(a, b, t):
     a, b = QtGui.QColor(a), QtGui.QColor(b)
-    return QtGui.QColor(int(a.red() + (b.red() - a.red()) * t), int(a.green() + (b.green() - a.green()) * t),
-                        int(a.blue() + (b.blue() - a.blue()) * t))
+    return QtGui.QColor(
+        int(a.red() + (b.red() - a.red()) * t),
+        int(a.green() + (b.green() - a.green()) * t),
+        int(a.blue() + (b.blue() - a.blue()) * t),
+    )
 
 
 def text_color(widget=None):
@@ -98,8 +133,9 @@ class Combo(QtWidgets.QComboBox):
         if self.before_popup is not None:
             try:
                 self.before_popup()
-            except Exception:
+            except Exception:  # noqa: BLE001 - what the list runs before it opens must not stop it; printed in the Listener
                 import traceback
+
                 traceback.print_exc()
         super(Combo, self).showPopup()
 
@@ -125,7 +161,7 @@ class DoubleSpin(QtWidgets.QDoubleSpinBox):
     def _strip(self, text):
         t = text
         if self.prefix() and t.startswith(self.prefix()):
-            t = t[len(self.prefix()):]
+            t = t[len(self.prefix()) :]
         if self.suffix() and t.endswith(self.suffix()):
             t = t[: -len(self.suffix())]
         return t
@@ -229,7 +265,7 @@ class Blocker(object):
         self.old = [w.blockSignals(True) for w in self.widgets]
 
     def __exit__(self, *a):
-        for w, o in zip(self.widgets, self.old):
+        for w, o in zip(self.widgets, self.old, strict=False):
             w.blockSignals(o)
 
 
@@ -262,6 +298,7 @@ class Toggle(QtWidgets.QAbstractButton):
 
 class NumberRow(QtWidgets.QWidget):
     """Slider + number box for one setting; `changed(value)` when the person moves either."""
+
     changed = QtCore.Signal(object)
 
     def __init__(self, minimum, maximum, step=None, integer=False, parent=None):
@@ -408,6 +445,7 @@ class _Grip(QtWidgets.QWidget):
 
 class Card(QtWidgets.QFrame):
     """A card: tinted title bar with its buttons, and a scrolling body the subclass fills."""
+
     CARD_ID = None
     NEEDS_SETUP = True
 
@@ -456,11 +494,23 @@ class Card(QtWidgets.QFrame):
             m.aboutToShow.connect(lambda: self.act_paste.setEnabled(self.sm.clipboard_has(cid)))
             hl.addWidget(b)
         if props:
-            hl.addWidget(tool("menu", "Property Selector: choose the settings this card shows", size=HEADER_ICON,
-                              slot=lambda: self.sm.open_property_selector(cid)))
+            hl.addWidget(
+                tool(
+                    "menu",
+                    "Property Selector: choose the settings this card shows",
+                    size=HEADER_ICON,
+                    slot=lambda: self.sm.open_property_selector(cid),
+                )
+            )
         if cid != 0:
-            hl.addWidget(tool("close", "Hide this card (bring it back from the side bar)", size=12,
-                              slot=lambda: self.sm.set_card_visible(cid, False)))
+            hl.addWidget(
+                tool(
+                    "close",
+                    "Hide this card (bring it back from the side bar)",
+                    size=12,
+                    slot=lambda: self.sm.set_card_visible(cid, False),
+                )
+            )
         outer.addWidget(self.header)
         self.scroll = QtWidgets.QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -512,7 +562,7 @@ class Card(QtWidgets.QFrame):
         try:
             if lay is not None and lay.hasHeightForWidth() and width > 0:
                 h = max(h, lay.minimumHeightForWidth(width))
-        except Exception:
+        except (RuntimeError, AttributeError):
             pass
         return self.header.height() + h + 2
 
@@ -527,7 +577,9 @@ class Card(QtWidgets.QFrame):
 
     # -- look
     def restyle(self):
-        self.title_icon.setPixmap(icon(CARD_GLYPH.get(self.CARD_ID, "list"), HEADER_ICON).pixmap(px(HEADER_ICON), px(HEADER_ICON)))
+        self.title_icon.setPixmap(
+            icon(CARD_GLYPH.get(self.CARD_ID, "list"), HEADER_ICON).pixmap(px(HEADER_ICON), px(HEADER_ICON))
+        )
         self.header.setFixedHeight(px(HEADER_HEIGHT))
         base = pal().color(QtGui.QPalette.Window)
         card = blend(base, pal().color(QtGui.QPalette.Base), 0.6)
@@ -537,7 +589,8 @@ class Card(QtWidgets.QFrame):
         self.setStyleSheet(
             "#osCard{background:%s;border:1px solid %s;border-radius:4px}"
             "#osCardHeader{background:%s;border-top-left-radius:4px;border-top-right-radius:4px}"
-            % (card.name(), border.name(), head.name()))
+            % (card.name(), border.name(), head.name())
+        )
         self.scroll.viewport().setAutoFillBackground(False)
         self.stack.setAutoFillBackground(False)
         v = QtGui.QColor(card)
@@ -566,7 +619,10 @@ class Card(QtWidgets.QFrame):
                 self._dragging = False
             elif t == QtCore.QEvent.MouseMove and getattr(self, "_press", None) is not None:
                 gp = ev.globalPosition().toPoint()
-                if not self._dragging and (gp - self._press).manhattanLength() > QtWidgets.QApplication.startDragDistance():
+                if (
+                    not self._dragging
+                    and (gp - self._press).manhattanLength() > QtWidgets.QApplication.startDragDistance()
+                ):
                     self._dragging = True
                     self.header.setCursor(QtCore.Qt.ClosedHandCursor)
                     self.board().drag_start(self, self._press)
@@ -657,6 +713,7 @@ class Card(QtWidgets.QFrame):
 class GridBoard(QtWidgets.QWidget):
     """Cards on a grid: drag a card by its title anywhere, stretch it from its corner.
     12 columns when wide, 6 when narrow; rows of ~11 px; every card floats up so nothing overlaps."""
+
     layout_changed = QtCore.Signal()
 
     def __init__(self, sm, parent=None):
@@ -668,7 +725,9 @@ class GridBoard(QtWidgets.QWidget):
         self.drag = None
         self.sizing = None
         self.placeholder = QtWidgets.QFrame(self)
-        self.placeholder.setStyleSheet("background:rgba(40,154,211,40);border:1px dashed %s;border-radius:4px" % PRIMARY)
+        self.placeholder.setStyleSheet(
+            "background:rgba(40,154,211,40);border:1px dashed %s;border-radius:4px" % PRIMARY
+        )
         self.placeholder.hide()
         self.autoscroll = QtCore.QTimer(self)
         self.autoscroll.setInterval(30)
@@ -694,8 +753,12 @@ class GridBoard(QtWidgets.QWidget):
 
     def rect(self, p):
         m, u, cw = self.margin(), self.unit(), self.colw()
-        return QtCore.QRect(int(round(m + p[0] * (cw + m))), int(round(m + p[1] * u)),
-                            int(round(p[2] * cw + (p[2] - 1) * m)), int(round(p[3] * u - m)))
+        return QtCore.QRect(
+            int(round(m + p[0] * (cw + m))),
+            int(round(m + p[1] * u)),
+            int(round(p[2] * cw + (p[2] - 1) * m)),
+            int(round(p[3] * u - m)),
+        )
 
     def min_size(self, cid):
         mw, mh = model.MIN_SIZE.get(cid, (3, 20))
