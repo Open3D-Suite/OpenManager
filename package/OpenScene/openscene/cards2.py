@@ -4,7 +4,7 @@ import os
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import maxlink, model
+from . import maxlink, model, trust
 from .cards import FlagTable, fit_columns, hrow, muted
 from .widgets import Blocker, Card, ColorButton, Combo, DoubleSpin, FlowLayout, NumberRow, Spin, TabBar, icon, menu_tool, tool
 
@@ -317,6 +317,7 @@ class RenderPresetCard(Card):
         s = self.setup()
         if s:
             s["render_preset"]["path"] = p.replace("\\", "/")
+            self.sm.trust_file(p)  # chosen here, on this computer
             self.fill(s)
             self.sm.changed()
 
@@ -724,6 +725,7 @@ class ScriptFileCard(Card):
         s = self.setup()
         if s and s["scripts"][k].get("path") != t:
             s["scripts"][k]["path"] = t
+            self.sm.trust_file(t)  # typed here, on this computer
             self.sm.changed()
 
     def _browse(self, k):
@@ -732,6 +734,7 @@ class ScriptFileCard(Card):
             s = self.setup()
             if s:
                 s["scripts"][k].update(path=f.replace("\\", "/"), enabled=True)
+                self.sm.trust_file(f)  # chosen here, on this computer
                 self.fill(s)
                 self.sm.changed()
 
@@ -775,10 +778,15 @@ class ScriptEditorCard(Card):
         s = self.setup()
         if s:
             s["snippet"][self.key()] = self.edit.toPlainText()
+            self.sm.note_typed((s["id"], self.key()), s["snippet"][self.key()])  # typed here: it may run
             self.sm.changed(apply=False, list_too=False)
 
     def _test(self):
-        maxlink.run_code(self.edit.toPlainText())
+        # the person pressed Test on the text they see: it runs, and is trusted from now on
+        text = self.edit.toPlainText()
+        if text.strip():
+            self.sm.trust([trust.code_digest(text)])
+        maxlink.run_code(text)
         self.sm.toast("Script run (see the MAXScript Listener for its output)")
 
 

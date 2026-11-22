@@ -7,7 +7,7 @@ import traceback
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, widgets
+from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, trust, widgets
 from .widgets import Blocker, Card, GridBoard, PRIMARY, TINTS, blend, icon, menu_tool, pal, text_color, tool
 
 VERSION = __version__
@@ -290,6 +290,10 @@ class SceneManager(QtWidgets.QDockWidget):
         self.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable | QtWidgets.QDockWidget.DockWidgetFloatable
                          | QtWidgets.QDockWidget.DockWidgetClosable)
         self.settings = self.load_settings()
+        self.typed_here = {}  # (setup id, Script Editor tab) -> digest of the text typed there in this window
+        self.refused = set()  # digests the person said no to, until the window is closed
+        self.announced = set()  # what was left out and already said, so it is said once
+        self.stored_problem = None  # why the setups of the open file were not read whole
         widgets.set_icon_scale(self.settings.get("theme", {}).get("icons", "medium"))
         self.apply_theme_palette()
         self._icon_color = text_color()
@@ -451,6 +455,8 @@ class SceneManager(QtWidgets.QDockWidget):
         if settings_path() is None:
             print("OpenScene: settings not saved: Windows gives no folder for them (APPDATA is not set)")
             return
+        if getattr(self, "typed_here", None):
+            st["trusted_code"] = trust.remember(st.get("trusted_code") or [], list(self.typed_here.values()))
         try:
             folders.write_json(settings_path(), st)
             folders.write_text(notify_flag_path(), "1" if st.get("notify", True) else "0")
@@ -612,6 +618,13 @@ class SceneManager(QtWidgets.QDockWidget):
         self.rs_default = data.get("rs_default") or {}
         self.next_id = max([s["id"] for s in self.setups] + [0]) + 1
         self.last_saved = self.encoded()
+        # setups OpenScene could not take (a newer format, too big, damaged) stay in the file as they are
+        self.stored_problem = data.get("problem")
+        if self.stored_problem:
+            print("OpenScene: the setups of this file were not read whole: %s. They are left as they are." % self.stored_problem)
+            QtWidgets.QMessageBox.warning(self, TITLE, "The setups of this file were not read whole: %s.\n\n"
+                                          "OpenScene leaves them as they are in the file: what you change now is not "
+                                          "saved in it." % self.stored_problem)
         if source == "external":
             self.toast("Converted %d setup(s) saved by another scene manager in this file" % len(self.setups))
             # written with the file next time it is saved: from then on these are the setups (the others are not read again)
@@ -848,11 +861,66 @@ class SceneManager(QtWidgets.QDockWidget):
             if valid and model.output_problem(path, self.scene.engine_id):
                 valid = False
             out_path = path if valid else ""
-        return maxlink.actions(s, self.scene, self.enabled_rows, out_path, rendering, self.opts(), self.rs_default)
+        refused = []
+        acts = maxlink.actions(s, self.scene, self.enabled_rows, out_path, rendering, self.opts(), self.rs_default,
+                               refused=refused)
+        fresh = [r for r in refused if r not in self.announced]
+        if fresh:
+            self.announced.update(fresh)
+            for r in fresh:
+                print("OpenScene: setup %s: left out %s (a setup may not set it)" % (s.get("id"), r))
+            self.toast("%d setting(s) of this file were left out (see the MAXScript Listener)" % len(fresh))
+        return acts
 
-    def run_actions(self, acts, redraw=True):
+    # ------------------------------------------------------------ what a setup may run
+    def trusted_digests(self):
+        return set(self.settings.get("trusted_code") or []) | set(self.typed_here.values())
+
+    def trust(self, digests):
+        """Scripts and presets written or chosen in this window, or that the person said yes to: they run without
+        asking from now on (until they change)."""
+        self.settings["trusted_code"] = trust.remember(self.settings.get("trusted_code") or [], list(digests))
+        self.save_settings()
+
+    def note_typed(self, where, text):
+        """Text typed in the Script Editor card: trusted as it is, kept with the settings when they are saved."""
+        self.typed_here[where] = trust.code_digest(text)
+
+    def trust_file(self, path):
+        d = trust.file_digest(path) if path else None
+        if d:
+            self.trust([d])
+
+    def review(self, acts, ask=True):
+        """The actions without what this computer doesn't trust. ask: first show what the file would run and ask,
+        with No as the answer Enter gives; a no holds until the window is closed."""
+        known = self.trusted_digests()
+        pending = [it for it in trust.items(acts) if it.digest and it.digest not in known and it.digest not in self.refused]
+        if pending and ask:
+            box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, TITLE, trust.question(pending),
+                                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, self)
+            box.setDefaultButton(QtWidgets.QMessageBox.No)
+            box.setEscapeButton(QtWidgets.QMessageBox.No)
+            if box.exec() == QtWidgets.QMessageBox.Yes:
+                self.trust(it.digest for it in pending)
+                known = self.trusted_digests()
+            else:
+                self.refused.update(it.digest for it in pending)
+        out, left_out = trust.allowed_actions(acts, lambda d: d in known)
+        fresh = [it for it in left_out if (it.digest or it.preview) not in self.announced]
+        if fresh:
+            self.announced.update(it.digest or it.preview for it in fresh)
+            for it in fresh:
+                why = "it cannot be read" if it.digest is None else "not trusted on this computer"
+                print("OpenScene: not run (%s): %s" % (why, it.preview))
+            self.toast("%d script(s) or preset(s) of this file were not run (see the MAXScript Listener)" % len(fresh))
+        return out
+
+    def run_actions(self, acts, redraw=True, ask=True):
         """Applies changes; events 3ds Max fires because of them (a render preset load looks like a file
-        being opened) are not taken for the person opening another scene."""
+        being opened) are not taken for the person opening another scene. What runs scripts or presets goes through
+        review() first."""
+        acts = self.review(acts, ask=ask)
         self.applying += 1
         try:
             maxlink.run(acts, redraw=redraw)
@@ -1638,6 +1706,8 @@ class SceneManager(QtWidgets.QDockWidget):
         return issues
 
     def _begin_render(self, jobs):
+        # what the batch would run is asked about once, now, not in the middle of the night
+        self.review([a for s in jobs for a in self.actions_for(s, True)])
         self.rendering = True
         self.render_jobs = list(jobs)
         self.render_done = 0
@@ -1669,7 +1739,7 @@ class SceneManager(QtWidgets.QDockWidget):
         QtWidgets.QApplication.processEvents()
         t0 = time.time()
         try:
-            self.run_actions(self.actions_for(s, True))
+            self.run_actions(self.actions_for(s, True), ask=False)
             result = maxlink.render()
         except Exception as ex:
             traceback.print_exc()
@@ -1727,6 +1797,8 @@ class SceneManager(QtWidgets.QDockWidget):
     def save_setups(self):
         if self.loading:
             return  # another file is being opened; its own setups will be read
+        if getattr(self, "stored_problem", None):
+            return  # the file's setups were not read whole: never written over
         text = self.encoded()
         if text == self.last_saved:
             return

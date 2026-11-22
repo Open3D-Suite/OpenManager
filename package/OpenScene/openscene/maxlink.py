@@ -212,21 +212,46 @@ def read_pipeline(obj, prop):
     return out
 
 
+def new_operator(cls):
+    """A new Corona colour-mapping operator of this class, or None: the class name comes from a setup, so it must be
+    an operator's plain name, and it is looked up among 3ds Max's classes, never run as code."""
+    if not model.is_tone_operator(cls):
+        print("OpenScene: refused a tone-mapping operator of class %r (not an operator's name)" % (cls,))
+        return None
+    c = getattr(rt, cls, None)
+    if c is None or str(rt.classOf(c)) != "MAXClass":
+        print("OpenScene: this 3ds Max has no tone-mapping operator %s" % cls)
+        return None
+    return c()
+
+
+def set_operator_props(op, cls, props):
+    """The values a setup stores for an operator: plain names and plain values only, never the link to the next one."""
+    for n, v in (props or {}).items():
+        if not model.is_plain_name(n) or n.endswith("_nextOperator"):
+            print("OpenScene: refused the setting %r of a %s" % (n, cls))
+            continue
+        if isinstance(v, dict) and "$color" in v:
+            try:
+                v = rt.Color(*[float(x) for x in v["$color"]][:3])
+            except (TypeError, ValueError):
+                continue
+        elif not model.is_scalar(v):
+            continue
+        try:
+            rt.setProperty(op, n, v)
+        except Exception as ex:  # noqa: BLE001 - one setting 3ds Max refuses must not stop the others; said here
+            print("OpenScene: %s.%s -> %s" % (cls, n, ex))
+
+
 def write_pipeline(obj, prop, chain):
     first = None
     prev = None
     for item in chain:
-        try:
-            op = rt.execute("%s()" % item["class"])
-        except Exception:
+        op = new_operator(item.get("class"))
+        if op is None:
             continue
-        for n, v in item.get("props", {}).items():
-            try:
-                if isinstance(v, dict) and "$color" in v:
-                    v = rt.Color(*v["$color"])
-                rt.setProperty(op, n, v)
-            except Exception:
-                pass
+        set_operator_props(op, item["class"], item.get("props"))
         if prev is not None:
             try:
                 rt.setProperty(prev, "colorMappingOperator_nextOperator", op)
@@ -297,9 +322,8 @@ def apply_tone(chain):
     for item in chain:
         op = next((o for o in live if str(rt.classOf(o)) == item["class"] and o not in used), None)
         if op is None:
-            try:
-                op = rt.execute("%s()" % item["class"])
-            except Exception:
+            op = new_operator(item.get("class"))
+            if op is None:
                 continue
             if live:
                 rt.setProperty(live[-1], "colorMappingOperator_nextOperator", op)
@@ -307,13 +331,7 @@ def apply_tone(chain):
                 rt.setProperty(rt.renderers.current, "colorMap_pipeline", op)
             live.append(op)
         used.append(op)
-        for n, v in item.get("props", {}).items():
-            try:
-                if isinstance(v, dict) and "$color" in v:
-                    v = rt.Color(*v["$color"])
-                rt.setProperty(op, n, v)
-            except Exception as ex:
-                print("OpenScene: %s.%s -> %s" % (item["class"], n, ex))
+        set_operator_props(op, item["class"], item.get("props"))
     for op in live:
         if op not in used:
             try:
@@ -325,7 +343,9 @@ def apply_tone(chain):
 def apply_lightmix(arrays):
     r = rt.renderers.current
     for name, vals in arrays.items():
-        if name == "colormap_lightselect_elementNames":
+        if name not in model.LIGHTMIX_ARRAYS or not isinstance(vals, list):
+            if name != "colormap_lightselect_elementNames":
+                print("OpenScene: refused the LightMix setting %r" % (name,))
             continue
         if name == "colorMap_lightmixColors":
             vals = [rt.Color(*c) for c in vals]
@@ -337,12 +357,14 @@ def apply_lightmix(arrays):
 
 # ---------------------------------------------------------------- what a setup does
 
-def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=None):
+def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=None, refused=None):
     """The list of changes a setup makes, in order. `enabled(card)` gives the ticked (tab, prop) pairs.
-    opts: settings of the window (viewport mode, time output type...)."""
+    opts: settings of the window (viewport mode, time output type...). What the setup carries that a setup may not
+    set (a name that is not a plain name...) is left out and named in `refused`, when it is a list."""
     opts = opts or {}
     out = []
     props = s.get("props", {})
+    refused = refused if refused is not None else []
 
     def stored(card, tab, p):
         return props.get("%d|%s|%s" % (card, tab["v_class"], p["name"]))
@@ -354,12 +376,16 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
     if rp.get("enabled") and rp.get("path"):
         out.append(("preset", rp["path"]))
     ro = s.get("rs_override", {})
-    if ro.get("enabled") and (rs_default or ro.get("set")):
+    over = ro.get("set") if isinstance(ro.get("set"), dict) else {}
+    if ro.get("enabled") and (rs_default or over):
         for k, v in sorted((rs_default or {}).items()):
-            if k not in ro.get("set", {}):
+            if k not in over and model.renderer_value_ok(k, v):
                 out.append(("rs", k, v))
-        for k, v in sorted(ro.get("set", {}).items()):
-            out.append(("rs", k, v))
+        for k, v in sorted(over.items()):
+            if model.renderer_value_ok(k, v):
+                out.append(("rs", k, v))
+            else:
+                refused.append("Render Override: %s" % (k,))
     f = s["frames"]
     if f["enabled"]:
         out.append(("time", int(f["kind"]), int(f["single"]), int(f["start"]), int(f["end"]), max(1, int(f["nth"])),
@@ -513,7 +539,10 @@ def actions(s, scene, enabled, output_path, rendering, opts=None, rs_default=Non
                     out.append(("postlm", json.dumps(c.get("arrays", {}), sort_keys=True)))
                 else:
                     for k, v in sorted(c.get("props", {}).items()):
-                        out.append(("rs", k, v))
+                        if model.post_setting_ok(key, k) and model.is_scalar(v):
+                            out.append(("rs", k, v))
+                        else:
+                            refused.append("Post-Production: %s" % (k,))
         elif po.get("conf") or po.get("lightmix"):  # stored by an older version
             out.append(("post", po.get("conf", ""), json.dumps(po.get("lightmix") or {}, sort_keys=True)))
     if s["xref"]["enabled"]:

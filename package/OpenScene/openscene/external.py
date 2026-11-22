@@ -8,8 +8,8 @@ import base64
 import json
 import re
 
-from .model import (DEFAULT_HEIGHT, DEFAULT_RATIO, DEFAULT_WIDTH, empty_setup, from_max, layer_entry, new_token,
-                    object_entry)
+from .model import (DEFAULT_HEIGHT, DEFAULT_RATIO, DEFAULT_WIDTH, MAX_SETUPS, MAX_STORED, empty_setup, from_max,
+                    layer_entry, new_token, normalize, object_entry)
 
 KEY = "SceneManager_Dat"
 
@@ -58,15 +58,17 @@ def _props_into(card, lst, out):
 
 def convert(data, first_id):
     """Reads the setups another scene manager keeps in SceneManager_Dat (base64 JSON). The original data is left as it is."""
+    if not isinstance(data, str) or len(data) > MAX_STORED:
+        return None
     try:
         raw = base64.b64decode(data + "=" * (-len(data) % 4))
         lst = json.loads(raw.decode("utf-8"))
-    except Exception:
+    except (ValueError, UnicodeDecodeError):
         return None
     if not isinstance(lst, list):
         return None
     out = []
-    for i, v in enumerate(lst):
+    for i, v in enumerate([v for v in lst if isinstance(v, dict)][:MAX_SETUPS]):
         g = lambda k: v.get(k) or {}
         s = empty_setup(first_id + i)
         s["render"] = _b(g("render").get("enabled"), True)
@@ -165,5 +167,5 @@ def convert(data, first_id):
         if toks:
             s["output"]["preset"] = toks
         s["notes"] = g("notes").get("text") or ""
-        out.append(s)
+        out.append(normalize(s))
     return out

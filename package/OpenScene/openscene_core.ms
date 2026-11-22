@@ -33,6 +33,36 @@ fn oscn_keepMap m =
 	true
 )
 
+-- ---------------------------------------------------------------- class names, never run as code
+
+-- a plain name: letters, digits and underscores, not starting with a digit (a class name read from a setup)
+fn oscn_isPlainName s =
+(
+	if (classof s != String or s.count == 0 or s.count > 128) do return false
+	local okFirst = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+	local ok = okFirst + "0123456789"
+	if ((findString okFirst s[1]) == undefined) do return false
+	for i = 2 to s.count do if ((findString ok s[i]) == undefined) do return false
+	true
+)
+
+-- the class of this kind (textureMap, camera...) that has this name, looked up among the classes of that kind without
+-- running anything; undefined when the name is not a plain name or no class of that kind has it
+fn oscn_classNamed nm kind =
+(
+	if (not (oscn_isPlainName nm)) do return undefined
+	local want = toLower nm
+	for c in kind.classes where ((toLower (c as string)) == want) do return c
+	undefined
+)
+
+-- a new map or camera of the class with this name, or undefined when 3ds Max has no such class (a renderer missing)
+fn oscn_newOf nm kind =
+(
+	local c = oscn_classNamed nm kind
+	if (c == undefined) then undefined else (try (c()) catch undefined)
+)
+
 -- ---------------------------------------------------------------- JSON text
 
 fn oscn_quote v =
@@ -159,13 +189,13 @@ fn oscn_envMaps =
 	local wanted = #("CoronaBitmap", "VRayHDRI", "VRayBitmap", "FStormBitmap", "Bitmaptexture", "RS_Bitmap", "CoronaColorCorrect", "Color_Correction", "FStormColorCorrection", "CoronaSelect")
 	for n in skies do
 	(
-		try (for m in (getClassInstances (execute n)) do oscn_addEnvMap found offer m true) catch()
+		try (for m in (getClassInstances (oscn_classNamed n textureMap)) do oscn_addEnvMap found offer m true) catch()
 	)
 	for n in wanted do
 	(
 		try
 		(
-			for m in (getClassInstances (execute n)) do
+			for m in (getClassInstances (oscn_classNamed n textureMap)) do
 			(
 				local lvl = oscn_hdrLevel m
 				if (lvl > 0) do oscn_addEnvMap found offer m (lvl == 2)
@@ -198,7 +228,7 @@ fn oscn_envMaps =
 fn oscn_findMap cls nm =
 (
 	local c = undefined
-	try (c = execute cls) catch()
+	c = oscn_classNamed cls textureMap
 	if (c == undefined) do return undefined
 	local same = #()
 	try (for m in (getClassInstances c) where (m.name == nm) do append same m) catch()
@@ -763,7 +793,7 @@ fn oscn_hasLegacy =
 fn oscn_renameOldMixMaps =
 (
 	local c = undefined
-	try (c = execute "CoronaMix") catch()
+	c = oscn_classNamed "CoronaMix" textureMap
 	if (c != undefined) do
 		for m in (getClassInstances c) do
 			for old in oscn_oldMix where (matchPattern m.name pattern:(old + "*")) do
@@ -812,13 +842,13 @@ fn oscn_newCamera =
 	local eng = oscn_engineName()
 	try
 	(
-		if (eng == "Corona") then cam = (execute "CoronaCam()")
-		else if (eng == "V-Ray") then cam = (execute "VRayPhysicalCamera()")
+		if (eng == "Corona") then cam = (oscn_newOf "CoronaCam" camera)
+		else if (eng == "V-Ray") then cam = (oscn_newOf "VRayPhysicalCamera" camera)
 	)
 	catch()
 	if (cam == undefined) do cam = Physical()
 	try (cam.transform = (inverse (getViewTM()))) catch()
-	try (cam.name = uniqueName "DF_Camera") catch()
+	try (cam.name = uniqueName "OpenScene_Camera") catch()
 	viewport.setCamera cam
 	cam.inode.handle
 )
@@ -1062,8 +1092,7 @@ fn oscn_texmaps =
 
 fn oscn_findTexmap cls nm =
 (
-	local c = undefined
-	try (c = execute cls) catch()
+	local c = oscn_classNamed cls textureMap
 	if (c == undefined) do return undefined
 	for m in (getClassInstances c) do (if (m.name == nm) do return m)
 	undefined
@@ -1098,13 +1127,13 @@ fn oscn_hdriBitmap path =
 	local classes = if (eng == "Corona") then #("CoronaBitmap") else if (eng == "V-Ray") then #("VRayBitmap", "VRayHDRI") else #("Bitmaptexture")
 	for n in classes do
 	(
-		try (for m in (getClassInstances (execute n)) where (oscn_samePath (oscn_mapFile m) path) do return m) catch()
+		try (for m in (getClassInstances (oscn_classNamed n textureMap)) where (oscn_samePath (oscn_mapFile m) path) do return m) catch()
 	)
 	local m = undefined
 	try
 	(
-		if (eng == "Corona") then (m = execute "CoronaBitmap()"; m.filename = path)
-		else if (eng == "V-Ray") then (m = execute "VRayBitmap()"; m.HDRIMapName = path)
+		if (eng == "Corona") then (m = oscn_newOf "CoronaBitmap" textureMap; m.filename = path)
+		else if (eng == "V-Ray") then (m = oscn_newOf "VRayBitmap" textureMap; m.HDRIMapName = path)
 	)
 	catch()
 	if (m == undefined) do (m = Bitmaptexture(); m.filename = path)
@@ -1162,8 +1191,8 @@ fn oscn_newSky =
 	local m = undefined
 	try
 	(
-		if (eng == "Corona") then m = execute "CoronaSky()"
-		else if (eng == "V-Ray") then m = execute "VRaySky()"
+		if (eng == "Corona") then m = oscn_newOf "CoronaSky" textureMap
+		else if (eng == "V-Ray") then m = oscn_newOf "VRaySky" textureMap
 	)
 	catch()
 	if (m == undefined) do m = Physical_Sun___Sky_Environment()

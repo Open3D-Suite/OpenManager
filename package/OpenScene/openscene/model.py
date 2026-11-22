@@ -130,6 +130,41 @@ def parse_number(text):
         return None
 
 
+# ---------------------------------------------------------------- what a setup read from a file may name
+
+# A setup comes inside a .max file, possibly made by someone else: the names it carries are checked before they reach
+# 3ds Max. A class or property name is a plain name, never a path into other objects and never code.
+_PLAIN = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}")
+LIGHTMIX_ARRAYS = ("colorMap_lightmixIntensities", "colorMap_lightmixColors", "colorMap_lightmixEnabledLayers")
+
+
+def is_plain_name(text):
+    """Letters, digits and underscores, not starting with a digit: a name that cannot reach another object."""
+    return isinstance(text, str) and _PLAIN.fullmatch(text) is not None
+
+
+def is_tone_operator(cls):
+    """A Corona colour-mapping operator class (ToneMappingOperatorPlugin...): the only classes a tone-mapping chain
+    may make."""
+    return is_plain_name(cls) and cls.endswith("OperatorPlugin")
+
+
+def is_scalar(v):
+    return isinstance(v, (bool, int, float, str))
+
+
+def renderer_value_ok(name, v):
+    """A render setting a setup may carry (Render Override, the default render settings): a renderer property of its
+    own, by a plain name, with a plain value, as the Fetch buttons take them."""
+    return is_plain_name(name) and is_scalar(v)
+
+
+def post_setting_ok(key, name):
+    """A setting of the Post-Production card: only those its category lists."""
+    names = next((n for k, _, n in POST_CATS if k == key), ())
+    return name in names
+
+
 # ---------------------------------------------------------------- property table
 
 _TABS = None
@@ -369,15 +404,30 @@ def empty_setup(sid):
     }
 
 
+def _same_kind(default, v):
+    """Whether a stored value has the kind of the default it stands for: a number for a number (whole or not), a
+    switch for a switch, a text for a text, a list for a list, a group for a group."""
+    if isinstance(default, bool):
+        return isinstance(v, bool)
+    if isinstance(default, (int, float)):
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+    if default is None:
+        return v is None or (isinstance(v, (int, float, str)) and not isinstance(v, bool))
+    return isinstance(v, type(default))
+
+
 def normalize(s, sid=None):
-    """Fills in anything missing from a stored setup (older versions, hand edits)."""
-    base = empty_setup(s.get("id", sid) if sid is None else sid)
+    """Fills in anything missing from a stored setup (older versions, hand edits) and replaces a value of the wrong
+    kind with its default, so that a file made to break the window cannot."""
+    sid = s.get("id", sid) if sid is None else sid
+    base = empty_setup(sid if isinstance(sid, int) and not isinstance(sid, bool) else 0)
     for k, v in base.items():
-        if k not in s:
+        if k not in s or not _same_kind(v, s[k]):
             s[k] = v
-        elif isinstance(v, dict) and isinstance(s[k], dict):
+        elif isinstance(v, dict):
             for k2, v2 in v.items():
-                s[k].setdefault(k2, v2)
+                if k2 not in s[k] or not _same_kind(v2, s[k][k2]):
+                    s[k][k2] = copy.deepcopy(v2)
     return s
 
 
@@ -449,8 +499,14 @@ OLD_COMPRESSED_PREFIX = "pzz1:"  # setups saved before 2.0.0
 COMPRESS_FROM = 32 * 1024  # bigger than this, the text kept in the .max is zlib + base64 (layer lists shrink ~10x)
 
 
+# The format of the setups kept in a .max file. A file whose version is newer is refused, never guessed at.
+FORMAT_VERSION = 1
+MAX_STORED = 64 * 1024 * 1024  # the stored text, unpacked: far more than thousands of setups take
+MAX_SETUPS = 2000
+
+
 def encode(setups, todo=None, extra=None):
-    d = {"format": "openscene", "version": 1, "setups": setups, "todo": todo or []}
+    d = {"format": "openscene", "version": FORMAT_VERSION, "setups": setups, "todo": todo or []}
     d.update(extra or {})
     text = json.dumps(d, separators=(",", ":"))
     if len(text) > COMPRESS_FROM:
@@ -459,26 +515,72 @@ def encode(setups, todo=None, extra=None):
     return text
 
 
+def _unpack(packed):
+    """zlib data, unpacked up to MAX_STORED bytes; ValueError when it is broken or bigger."""
+    import zlib
+
+    try:
+        d = zlib.decompressobj()
+        raw = d.decompress(base64.b64decode(packed, validate=True), MAX_STORED)
+    except (ValueError, zlib.error) as error:
+        raise ValueError("the stored setups are damaged") from error
+    if d.unconsumed_tail:
+        raise ValueError("the stored setups are bigger than OpenScene reads")
+    return raw.decode("utf-8")
+
+
+def _refused(why):
+    """What decode gives for setups it does not read: none, and why. The window keeps them as they are in the file."""
+    return {"setups": [], "todo": [], "rs_default": {}, "problem": why}
+
+
 def decode(text):
-    """Stored text -> {"setups": [...], "todo": [...]}, or None when it isn't ours."""
+    """Stored text -> {"setups": [...], "todo": [...], "rs_default": {...}, "problem": None}, or None when it isn't
+    ours. Setups it cannot take (a newer format, too big, damaged) come back as none, with "problem" saying why."""
     if not text:
         return None
+    if len(text) > MAX_STORED:
+        return _refused("the stored setups are bigger than OpenScene reads")
     prefix = next((p for p in (COMPRESSED_PREFIX, OLD_COMPRESSED_PREFIX) if text.startswith(p)), None)
     if prefix:
-        import zlib
         try:
-            text = zlib.decompress(base64.b64decode(text[len(prefix):])).decode("utf-8")
-        except Exception:
-            return None
+            text = _unpack(text[len(prefix) :])
+        except (ValueError, UnicodeDecodeError) as error:
+            return _refused(str(error))
     try:
         data = json.loads(text)
     except ValueError:
         return None
-    if isinstance(data, dict) and isinstance(data.get("setups"), list):
-        return {"setups": [normalize(s) for s in data["setups"] if isinstance(s, dict)],
-                "todo": [t for t in data.get("todo", []) if isinstance(t, dict)],
-                "rs_default": data.get("rs_default") or {}}
-    return None
+    if not (isinstance(data, dict) and isinstance(data.get("setups"), list)):
+        return None
+    version = data.get("version", 1)
+    if not isinstance(version, int) or isinstance(version, bool):
+        return _refused("the stored setups have no format version OpenScene knows")
+    if version > FORMAT_VERSION:
+        return _refused("they were saved by a newer OpenScene (format %d): update OpenScene to use them" % version)
+    setups = [normalize(s) for s in data["setups"] if isinstance(s, dict)]
+    problem = None
+    if len(setups) > MAX_SETUPS:
+        problem = "only the first %d of %d setups were read" % (MAX_SETUPS, len(setups))
+        setups = setups[:MAX_SETUPS]
+    # every setup has an id of its own: a missing or repeated one gets a new one
+    seen = set()
+    next_id = max([s["id"] for s in setups if s["id"] > 0] + [0]) + 1
+    for s in setups:
+        if s["id"] <= 0 or s["id"] in seen:
+            s["id"] = next_id
+            next_id += 1
+        seen.add(s["id"])
+    todo = data.get("todo")
+    rs_default = data.get("rs_default")
+    return {
+        "setups": setups,
+        "todo": [t for t in todo if isinstance(t, dict)] if isinstance(todo, list) else [],
+        "rs_default": {k: v for k, v in rs_default.items() if renderer_value_ok(k, v)}
+        if isinstance(rs_default, dict)
+        else {},
+        "problem": problem,
+    }
 
 
 # ---------------------------------------------------------------- output path
