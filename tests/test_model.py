@@ -164,6 +164,25 @@ class PresetFiles(unittest.TestCase):
         self.assertEqual(out["preset"][1]["value"], "_")  # a value of the wrong kind gets the default
 
 
+class OutputPath(unittest.TestCase):
+    def path(self, project, *tokens):
+        out = {"project_path": project, "preset": [dict(model.new_token(k), **v) for k, v in tokens]}
+        return model.final_path(out, "house_v02.max", "Cam01", "Hall", 0, "PC", "user")
+
+    def test_the_tokens_make_the_path(self):
+        path, valid = self.path("D:/renders", ("Camera", {}), ("Extension", {"value": ".exr"}))
+        self.assertEqual((path, valid), ("D:/renders/Cam01.exr", True))
+
+    def test_a_network_share_is_a_place_to_render_to(self):
+        self.assertTrue(self.path("//server/jobs/house", ("Camera", {}), ("Extension", {}))[1])
+
+    def test_a_path_from_a_file_cannot_step_up_or_be_relative(self):
+        # a setup comes inside a .max file: 3ds Max writes there and makes its folders
+        for project, text in (("D:/renders", "../../Windows/x"), ("renders", "a"), ("D:/a", "b:c"), ("D:/a", "x\x01")):
+            path, valid = self.path(project, ("Text", {"value": text}), ("Extension", {}))
+            self.assertFalse(valid, path)
+
+
 class SharedLists(unittest.TestCase):
     def test_the_rows_of_every_setup_make_one_list_in_order(self):
         a, b = model.empty_setup(1), model.empty_setup(2)

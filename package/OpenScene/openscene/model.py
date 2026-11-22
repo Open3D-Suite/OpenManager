@@ -893,8 +893,19 @@ def format_date(fmt, now=None):
     return now.strftime(f)
 
 
+_ABSOLUTE = re.compile(r"^(?:[A-Za-z]:/|//[^/]+/[^/]+/)")
+
+
 def is_valid_file_path(p):
-    return not any(c in p for c in '*?"<>|') and p.count(":") <= 1
+    """A render output path (with / as separator): absolute, on a drive or a network share; no step up (..), no
+    character Windows refuses in a name. A setup comes inside a file, so its path is checked before 3ds Max writes
+    there or makes its folders."""
+    if not _ABSOLUTE.match(p):
+        return False
+    rest = p[2:] if p[1:2] == ":" else p
+    if any(c in rest for c in '*?"<>|:') or any(ord(c) < 32 for c in p):
+        return False
+    return ".." not in [segment.strip() for segment in p.split("/")]
 
 
 def final_path(out, file_name, camera_name, scene_name, index, pc_name, user_name):
