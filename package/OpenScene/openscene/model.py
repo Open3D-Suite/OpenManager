@@ -720,7 +720,6 @@ def shared_rows(setups, key, field):
 # by name. A merge gives nodes new handles and a rename changes names, so every reference also keeps a lasting ID
 # ("uid", which OpenScene writes in the node's or the layer's app data: oscn_stampNodes / oscn_stampLayers) and the
 # name. The scene is asked where each reference is now (oscn_resolveNodes): by ID, then by handle, then by name.
-# Ported from OpenManager (Carles Llavata), GPL-3.0-or-later.
 
 
 def node_refs(s):

@@ -70,9 +70,6 @@ class Bundle(unittest.TestCase):
         self.assertTrue((contents / "OpenScene" / "openscene" / "window.py").is_file())
         self.assertTrue((contents / "OpenScene" / "openscene_core.ms").is_file())
 
-    def test_the_credit_of_ported_code_goes_in(self):
-        self.assertTrue((self.bundle / "NOTICE").is_file())
-
     def test_no_compiled_python_goes_in(self):
         found = [p for p in self.bundle.rglob("*") if p.name == "__pycache__" or p.suffix in (".pyc", ".pyo")]
         self.assertEqual(found, [])

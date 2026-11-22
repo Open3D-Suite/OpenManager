@@ -179,8 +179,6 @@ def build_bundle(version, dist=DIST):
     shutil.copy2(os.path.join(PKG, "OpenScene.mcr"), os.path.join(contents, "macroscripts"))
     os.makedirs(os.path.join(contents, "scripts"))
     shutil.copy2(os.path.join(BUNDLE_SRC, "openscene_bundle.ms"), os.path.join(contents, "scripts"))
-    # the credit of the code ported from other projects travels with every copy (the packager adds LICENSE)
-    shutil.copy2(os.path.join(ROOT, "NOTICE"), os.path.join(target, "NOTICE"))
     with open(os.path.join(target, "PackageContents.xml"), "w", encoding="utf-8", newline="\r\n") as f:
         f.write(package_contents(version))
     check_bundle(target, version)

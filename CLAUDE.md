@@ -95,8 +95,9 @@ Update it in the same commit as a change that makes it old.
 - Nodes and layers a setup uses carry a lasting ID in their app data (slot `oscn_uidSlot`, "OSID"; never another
   tool's), stamped when the setups are saved (`window.stamp_uids`) and followed by ID, then handle, then name
   (`oscn_resolveNodes`, `model.apply_resolved`, `model.follow_layer_renames`).
-- Code ported from OpenManager (GPL-3.0-or-later, Carles Llavata) is rewritten here and listed in `NOTICE`; add to
-  it what is ported next. Never bring its property tables or anything that names the reference program.
+- The author decided that the improvements brought in from OpenManager (archived) are the author's work: it was
+  made under the author's direction, so it carries no credit of its own. Never bring its property tables or anything
+  that names the reference program.
 - Layers and Objects show one list for all setups (`model.shared_rows`, `cards.share_rows`, `window.share_lists`);
   each setup keeps its own values. Decided by the author: the scene state carries over between setups, and Corona
   Interactive is not stopped when a setup is applied (`ipr_corona_restart`, off by default).

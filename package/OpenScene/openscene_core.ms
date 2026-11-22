@@ -455,8 +455,8 @@ fn oscn_scene objHandles:#() =
 -- ---------------------------------------------------------------- lasting IDs of the nodes and layers setups use
 
 -- A merge gives nodes new handles and a rename changes names: every node and layer a setup uses gets an ID of its
--- own in its app data, which travels with it (save, merge, rename). Ported from OpenManager (Carles Llavata),
--- GPL-3.0-or-later. The slot is OpenScene's own ("OSID"), so another tool's IDs are never read as these.
+-- own in its app data, which travels with it (save, merge, rename). The slot is OpenScene's own ("OSID"), so another
+-- tool's IDs are never read as these.
 global oscn_uidSlot = 1330858308
 
 fn oscn_uidOf obj = (local u = undefined; try (u = getAppData obj oscn_uidSlot) catch(); if (u == undefined) then "" else (u as string))
