@@ -1,0 +1,13 @@
+# OPEN3D common ruff settings. This block is the same in every OPEN3D repository that has Python.
+required-version = "==0.17.5"
+target-version = "py311"
+line-length = 120
+# Python files only: ruff would also reformat the Python examples inside Markdown files.
+extend-exclude = ["*.md"]
+
+[lint]
+select = ["E", "F", "I", "B", "BLE", "S"]
+
+# Specific to this repository.
+[lint.isort]
+known-first-party = ["openscene"]
