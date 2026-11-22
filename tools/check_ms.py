@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Checks the MAXScript files for two mistakes 3ds Max only reports when the script runs:
 reserved words used as names (`local at = ...` is a syntax error) and string escapes MAXScript doesn't know
 (only \\\\ \\n \\t \\r \\" are valid). Run: python tools/check_ms.py  (exit code 1 when something is found)."""

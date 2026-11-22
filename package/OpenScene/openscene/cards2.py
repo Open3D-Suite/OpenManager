@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """More cards: Background, Atmosphere, Variants, Render Elements, Render Preset / Override, Post-Production,
 Scripts and Thumbnail."""
 

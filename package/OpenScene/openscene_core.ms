@@ -1,4 +1,5 @@
-﻿-- OpenScene
+﻿-- SPDX-License-Identifier: GPL-3.0-or-later
+-- OpenScene
 -- MaxScript side of the tool: reads the scene and changes it for the Python window.
 -- Every function is prefixed oscn_ so nothing collides with other scripts.
 

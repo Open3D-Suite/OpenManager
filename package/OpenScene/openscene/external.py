@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Optional compatibility reader: setups that another scene manager keeps inside a .max (the SceneManager_Dat key
 on the root node, base64 JSON), converted to OpenScene setups. Only reads that data, never writes it.
 

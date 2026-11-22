@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """OpenScene's own list of the settings each card can show (the Property Selector), per engine.
 
 The property names are the ones each renderer / 3ds Max class exposes to MAXScript. Labels, ranges, defaults, order

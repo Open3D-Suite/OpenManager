@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Builds openscene/props.json (the Property Selector table) from tools/props_source.py.
 
 python tools/make_props.py
