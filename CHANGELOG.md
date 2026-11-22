@@ -23,6 +23,11 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
   run. Render Override, Post-Production and LightMix settings take only plain property names and plain values.
 - **Setups saved by a newer OpenScene are refused, not guessed at**: they stay in the file as they are, and what you
   change is not saved over them. So do setups that are damaged or bigger than OpenScene reads.
+- **Faster with many maps.** The maps are found by walking from what holds them (the materials, the environment, the
+  Material Editors and the texture-map settings of the renderer, cameras and lights), once, instead of going through
+  the whole scene once for each kind of map; and a setup looks its maps up in a list made at each read of the scene.
+  The map list of the texture-map settings, the Environment card and applying a setup no longer slow down with the
+  size of the scene. When several maps share a name, the one with the HDRI or sky in it still wins.
 - **Batch Render never renders without saving.**
   - Names are cleaned for Windows: what Windows does not allow in a file name (`: * ? " < > |`) becomes `_`, so a
     camera called `CAM:Bad` saves as `CAM_Bad.png`, and folder names lose the dots and spaces Windows would drop.

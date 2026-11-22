@@ -183,44 +183,135 @@ fn oscn_editorMaps =
     out
 )
 
+-- ---------------------------------------------------------------- every map the scene uses, in one walk
+
+-- Maps are found by walking from what holds them: the materials of the scene, the environment, the Material Editors,
+-- the maps the tool keeps, and the texture-map settings of the renderer, cameras and lights. One walk, instead of a
+-- getClassInstances for each class, which goes through the whole scene each time (seconds on big scenes).
+global oscn_walk
+fn oscn_walk m found seen =
+(
+    if (m == undefined) do return found
+    local id = undefined
+    try (id = (getHandleByAnim m) as integer) catch()
+    if (id == undefined or (HasDictValue seen id)) do return found
+    PutDictValue seen id true
+    local sc = undefined
+    try (sc = superclassof m) catch()
+    if (sc == textureMap) then
+    (
+        append found m
+        local n = 0
+        try (n = getNumSubTexmaps m) catch()
+        for i = 1 to n do (local sub = undefined; try (sub = getSubTexmap m i) catch(); oscn_walk sub found seen)
+    )
+    else if (sc == material) do
+    (
+        local n = 0
+        try (n = getNumSubMtls m) catch()
+        for i = 1 to n do (local sub = undefined; try (sub = getSubMtl m i) catch(); oscn_walk sub found seen)
+        n = 0
+        try (n = getNumSubTexmaps m) catch()
+        for i = 1 to n do (local sub = undefined; try (sub = getSubTexmap m i) catch(); oscn_walk sub found seen)
+    )
+    found
+)
+
+-- the maps in the settings of an object (the renderer, a camera, a light)
+fn oscn_walkProps obj found seen =
+(
+    if (obj == undefined) do return found
+    local names = #()
+    try (names = getPropNames obj) catch()
+    for p in names do
+    (
+        local v = undefined
+        try (v = getProperty obj p) catch()
+        if (v != undefined and (try ((superclassof v) == textureMap) catch false)) do oscn_walk v found seen
+    )
+    found
+)
+
+fn oscn_allMaps =
+(
+    local found = #()
+    local seen = Dictionary #integer
+    for m in sceneMaterials do oscn_walk m found seen
+    oscn_walk environmentMap found seen
+    try (oscn_walk renderers.current.environment_texture found seen) catch()
+    for m in (oscn_editorMaps()) do oscn_walk m found seen
+    try (for i = 1 to meditMaterials.count do oscn_walk meditMaterials[i] found seen) catch()
+    try (for m in rootNode.OpenScene_Maps do oscn_walk m found seen) catch()
+    oscn_walkProps renderers.current found seen
+    for c in cameras where (superclassof c == camera) do oscn_walkProps c found seen
+    for lt in lights where (superclassof lt == light) do oscn_walkProps lt found seen
+    found
+)
+
+-- Maps are looked up by class and name many times while setups are applied: they are kept in a dictionary, made again
+-- at every read of the scene (so a map made a moment ago is in it), and each one is checked before it is used.
+global oscn_mapCache = undefined
+
+fn oscn_cacheFrom maps =
+(
+    oscn_mapCache = Dictionary #string
+    for m in maps do
+    (
+        local key = toLower (((classof m) as string) + "|" + m.name)
+        if (HasDictValue oscn_mapCache key) then append (GetDictValue oscn_mapCache key) m
+        else PutDictValue oscn_mapCache key #(m)
+    )
+    maps
+)
+
+fn oscn_mapOk m c nm = (try (isValidObj m and m.name == nm and (classof m) == c) catch false)
+
+fn oscn_cached key c nm =
+(
+    if (oscn_mapCache == undefined or not (HasDictValue oscn_mapCache key)) then #()
+    else (for m in (GetDictValue oscn_mapCache key) where (oscn_mapOk m c nm) collect m)
+)
+
+-- the maps of this class with this name: from the cache; walked again when it has none; and, last, the slow way
+-- through every instance of the class, for a map nothing points to
+fn oscn_mapsNamed cls nm =
+(
+    local c = oscn_classNamed cls textureMap
+    if (c == undefined or classof nm != String) do return #()
+    local key = toLower (cls + "|" + nm)
+    local same = oscn_cached key c nm
+    if (same.count == 0) do
+    (
+        oscn_cacheFrom (oscn_allMaps())
+        same = oscn_cached key c nm
+    )
+    if (same.count == 0) do
+    (
+        try (same = for m in (getClassInstances c) where (m.name == nm) collect m) catch()
+        if (same.count > 0) do PutDictValue oscn_mapCache key same
+    )
+    same
+)
+
 -- maps the Environment card knows about, as #(maps, offered). Offered in the list: skies, bitmaps with an .hdr, and
 -- colour corrections / selects with such a bitmap linked below. The others (.exr) are kept so a setup using one still works.
 global oscn_skyClasses = #("CoronaSky", "VRaySky", "FStormSky", "Physical_Sun___Sky_Environment", "RS_Physical_Sky")
 
-fn oscn_envMaps =
+fn oscn_envMaps maps:undefined =
 (
     local found = #()
     local offer = #()
     local skies = oscn_skyClasses
     local wanted = #("CoronaBitmap", "VRayHDRI", "VRayBitmap", "FStormBitmap", "Bitmaptexture", "RS_Bitmap", "CoronaColorCorrect", "Color_Correction", "FStormColorCorrection", "CoronaSelect")
-    for n in skies do
+    if (maps == undefined) do maps = oscn_cacheFrom (oscn_allMaps())
+    for m in maps do
     (
-        try (for m in (getClassInstances (oscn_classNamed n textureMap)) do oscn_addEnvMap found offer m true) catch()
-    )
-    for n in wanted do
-    (
-        try
+        local cls = (classof m) as string
+        if ((findItem skies cls) > 0) then oscn_addEnvMap found offer m true
+        else if ((findItem wanted cls) > 0) do
         (
-            for m in (getClassInstances (oscn_classNamed n textureMap)) do
-            (
-                local lvl = oscn_hdrLevel m
-                if (lvl > 0) do oscn_addEnvMap found offer m (lvl == 2)
-            )
-        )
-        catch()
-    )
-    -- the ones only in an editor, and what is linked below them (a Color Correct over an .hdr bitmap...)
-    for top in (oscn_editorMaps()) do
-    (
-        for m in (oscn_chain top) do
-        (
-            local cls = (classof m) as string
-            if ((findItem skies cls) > 0) then oscn_addEnvMap found offer m true
-            else if ((findItem wanted cls) > 0) do
-            (
-                local lvl = oscn_hdrLevel m
-                if (lvl > 0) do oscn_addEnvMap found offer m (lvl == 2)
-            )
+            local lvl = oscn_hdrLevel m
+            if (lvl > 0) do oscn_addEnvMap found offer m (lvl == 2)
         )
     )
     if (environmentMap != undefined) do oscn_addEnvMap found offer environmentMap true
@@ -233,11 +324,7 @@ fn oscn_envMaps =
 -- environment slot now (or linked below it), then one the tool keeps.
 fn oscn_findMap cls nm =
 (
-    local c = undefined
-    c = oscn_classNamed cls textureMap
-    if (c == undefined) do return undefined
-    local same = #()
-    try (for m in (getClassInstances c) where (m.name == nm) do append same m) catch()
+    local same = oscn_mapsNamed cls nm
     if (same.count == 0) do return undefined
     if (same.count == 1) do return same[1]
     local inEnv = #()
@@ -329,7 +416,7 @@ fn oscn_scene objHandles:#() =
         )
     )
     local maps = #()
-    local envList = oscn_envMaps()
+    local envList = oscn_envMaps maps:(oscn_cacheFrom (oscn_allMaps()))
     for i = 1 to envList[1].count do
     (
         local m = envList[1][i]
@@ -1100,24 +1187,15 @@ fn oscn_isRendering =
 -- every texture map in the scene, as "class|name" lines (for map settings such as camera overrides)
 fn oscn_texmaps =
 (
-    -- an instance belongs to one class only: no need to look for repeats (that search made it O(n²): minutes with
-    -- tens of thousands of maps)
     local ss = stringStream ""
-    for c in textureMap.classes do
-    (
-        local found = #()
-        try (found = getClassInstances c) catch()
-        for m in found do format "%|%\n" ((classof m) as string) m.name to:ss
-    )
+    for m in (oscn_cacheFrom (oscn_allMaps())) do format "%|%\n" ((classof m) as string) m.name to:ss
     ss as string
 )
 
 fn oscn_findTexmap cls nm =
 (
-    local c = oscn_classNamed cls textureMap
-    if (c == undefined) do return undefined
-    for m in (getClassInstances c) do (if (m.name == nm) do return m)
-    undefined
+    local same = oscn_mapsNamed cls nm
+    if (same.count == 0) then undefined else same[1]
 )
 
 -- Batch Render (3ds Max's own) from setups: a scene state and a view per setup
@@ -1147,10 +1225,7 @@ fn oscn_hdriBitmap path =
 (
     local eng = oscn_engineName()
     local classes = if (eng == "Corona") then #("CoronaBitmap") else if (eng == "V-Ray") then #("VRayBitmap", "VRayHDRI") else #("Bitmaptexture")
-    for n in classes do
-    (
-        try (for m in (getClassInstances (oscn_classNamed n textureMap)) where (oscn_samePath (oscn_mapFile m) path) do return m) catch()
-    )
+    for m in (oscn_allMaps()) where ((findItem classes ((classof m) as string)) > 0 and (oscn_samePath (oscn_mapFile m) path)) do return m
     local m = undefined
     try
     (
