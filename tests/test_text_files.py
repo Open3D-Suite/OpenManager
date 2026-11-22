@@ -60,8 +60,8 @@ class MaxScriptCheck(unittest.TestCase):
         self.assertEqual(self.check('(\n    local closeAt = findString txt "x"\n)\n'), [])
 
     def test_an_escape_maxscript_does_not_know_is_found(self):
-        self.assertEqual(len(self.check('print "C:\\Users"\n')), 1)
-        self.assertEqual(self.check('print "C:\\\\Users\\n"\n'), [])
+        self.assertEqual(len(self.check('print "D:\\qfolder"\n')), 1)
+        self.assertEqual(self.check('print "D:\\\\qfolder\\n"\n'), [])
 
     def test_the_repository_passes_it(self):
         self.assertEqual(check_ms.main(), 0)
