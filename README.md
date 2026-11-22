@@ -17,7 +17,7 @@ testing.
 
 ## Install
 
-The easy way, once OpenScene is in the [Open3D Launcher](https://github.com/carlesllavata/Open3D/releases/latest):
+The easy way, once OpenScene is in the [Open3D Launcher](https://github.com/Open3D-Suite/Open3D-Launcher/releases/latest):
 click **Install** next to OpenScene, with 3ds Max closed. It puts OpenScene in `%APPDATA%\Autodesk\ApplicationPlugins`
 as a plug-in bundle (every 3ds Max from 2025 on loads it), tells you when a new version is out and updates it.
 
