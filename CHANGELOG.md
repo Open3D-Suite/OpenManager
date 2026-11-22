@@ -23,6 +23,16 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
   run. Render Override, Post-Production and LightMix settings take only plain property names and plain values.
 - **Setups saved by a newer OpenScene are refused, not guessed at**: they stay in the file as they are, and what you
   change is not saved over them. So do setups that are damaged or bigger than OpenScene reads.
+- **Batch Render never renders without saving.**
+  - Names are cleaned for Windows: what Windows does not allow in a file name (`: * ? " < > |`) becomes `_`, so a
+    camera called `CAM:Bad` saves as `CAM_Bad.png`, and folder names lose the dots and spaces Windows would drop.
+  - The Render Output card says what is missing under a red path ("The Camera token has no value (the setup has no
+    camera)", "No Extension token"...). Clicking such a setup leaves the scene's own output as it is; before, it
+    switched saving off.
+  - Before the batch starts, a setup that would save nothing (an incomplete path, or its card off and no output in
+    the scene) or whose camera is gone is listed with why and skipped; you render the others or cancel.
+  - After each render the file is looked for, and a setup that saved nothing counts as failed. At the end, every
+    setup is listed in the MAXScript Listener: saved and where, skipped or failed, and why.
 - **A render preset no longer brings the scripts of Render Setup.** A `.rps` file also keeps Render Setup's pre- and
   post-render scripts (*Common > Scripts*), so a preset could set a script that runs at the next render. When
   OpenScene loads a preset, those scripts are left as they were, also when the load fails.

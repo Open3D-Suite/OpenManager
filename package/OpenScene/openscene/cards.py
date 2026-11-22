@@ -1537,14 +1537,14 @@ class OutputCard(Card):
         self.update_final(s)
 
     def update_final(self, s):
-        path, valid = self.sm.final_path(s)
-        problem = model.output_problem(path, self.sm.scene.engine_id) if valid else None
-        if problem:
-            valid = False
+        path, missing = self.sm.build_path(s)
+        problem = model.output_problem(path, self.sm.scene.engine_id) if missing is None else None
+        valid = missing is None and not problem
         color = "#23d160" if valid else ("#ffb020" if problem else "#ff3860")
         text = path.replace("&", "&amp;").replace("<", "&lt;") or "(empty)"
-        if problem:
-            text += '<br><span style="color:%s">%s</span>' % (color, problem)
+        if problem or missing:
+            # what is missing, under the path: clicking such a setup leaves the scene's own output as it is
+            text += '<br><span style="color:%s">%s</span>' % (color, (problem or missing).replace("<", "&lt;"))
         elif valid and model.output_ext(path) in model.MULTILAYER_EXT:
             text += "<br>(render elements and LightMix go inside this file)"
         self.final.setText('<span style="color:%s">%s</span> %s' % (color, "●", text))

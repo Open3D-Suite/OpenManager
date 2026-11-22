@@ -908,6 +908,15 @@ def render():
     return str(rt.oscn_render())
 
 
+def render_output():
+    """The file the next render saves to, or "" when 3ds Max is set not to save one."""
+    try:
+        name = str(rt.rendOutputFilename or "")
+        return name if (bool(rt.rendSaveFile) and name) else ""
+    except MAX_ERRORS:
+        return ""
+
+
 def stop_render():
     rt.oscn_stop()
 

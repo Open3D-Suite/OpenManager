@@ -178,9 +178,106 @@ class OutputPath(unittest.TestCase):
 
     def test_a_path_from_a_file_cannot_step_up_or_be_relative(self):
         # a setup comes inside a .max file: 3ds Max writes there and makes its folders
-        for project, text in (("D:/renders", "../../Windows/x"), ("renders", "a"), ("D:/a", "b:c"), ("D:/a", "x\x01")):
-            path, valid = self.path(project, ("Text", {"value": text}), ("Extension", {}))
+        for project in ("renders", "D:/renders/../../Windows", "D:/a|b"):
+            path, valid = self.path(project, ("Text", {"value": "x"}), ("Extension", {}))
             self.assertFalse(valid, path)
+
+    def test_a_typed_token_never_leaves_the_project_folder(self):
+        path, valid = self.path("D:/renders", ("Text", {"value": "../../Windows/x"}), ("Extension", {}))
+        self.assertTrue(path.startswith("D:/renders/"), path)
+        self.assertNotIn("..", path)
+
+    def test_names_are_cleaned_for_windows(self):
+        out = {"project_path": "D:/r", "preset": [model.new_token("Camera"), model.new_token("Extension")]}
+        path, problem = model.build_path(out, "a.max", "CAM:Bad*", "", 0, "", "")
+        self.assertEqual((path, problem), ("D:/r/CAM_Bad_.jpg", None))
+        self.assertEqual(model.clean_name("Folder. /x", keep_folders=True), "Folder/x")
+
+    def test_the_path_says_what_it_lacks(self):
+        out = {"project_path": "D:/r", "preset": [model.new_token("Camera"), model.new_token("Extension")]}
+        self.assertEqual(
+            model.build_path(out, "a.max", None, "", 0, "", "")[1],
+            "The Camera token has no value (the setup has no camera)",
+        )
+        self.assertEqual(
+            model.build_path({"project_path": "", "preset": []}, "", "", "", 0, "", "")[1], "No project path"
+        )
+        no_ext = {"project_path": "D:/r", "preset": [model.new_token("Camera")]}
+        self.assertEqual(model.build_path(no_ext, "a.max", "C", "", 0, "", "")[1], "No Extension token")
+
+
+class BatchCheck(unittest.TestCase):
+    """Batch Render never renders a setup that would save nothing."""
+
+    def item(self, label, path="", problem=None, camera_gone=False):
+        return {"label": label, "path": path, "problem": problem, "camera_gone": camera_gone}
+
+    def test_a_setup_that_would_save_nothing_is_skipped_with_why(self):
+        found = model.batch_check(
+            [
+                self.item("#1", "D:/r/a.png"),
+                self.item("#2", "", "The Camera token has no value (the setup has no camera)"),
+                self.item("#3", ""),
+                self.item("#4", "D:/r/b.png", camera_gone=True),
+            ]
+        )
+        self.assertEqual(
+            found,
+            [
+                (1, "#2", "The Camera token has no value (the setup has no camera)", True),
+                (2, "#3", "it would save nothing", True),
+                (3, "#4", "its camera is not in the scene", True),
+            ],
+        )
+
+    def test_two_setups_on_one_file_are_said_but_rendered(self):
+        found = model.batch_check([self.item("#1", "D:/r/a.png"), self.item("#2", "D:\\r\\A.png")])
+        self.assertEqual(found, [(1, "#2", "saves to the same file as #1: one overwrites the other", False)])
+
+    def test_setups_that_all_save_have_nothing_to_say(self):
+        self.assertEqual(model.batch_check([self.item("#1", "D:/r/a.png"), self.item("#2", "D:/r/b.png")]), [])
+
+
+class WrittenFiles(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.folder = temporary.name
+
+    def touch(self, name):
+        import os
+
+        path = os.path.join(self.folder, name)
+        with open(path, "wb") as f:
+            f.write(b"x")
+        return path
+
+    def test_the_file_a_render_wrote_is_found(self):
+        import os
+        import time
+
+        path = self.touch("Cam01.png")
+        self.assertEqual(model.find_written(path, time.time()), [os.path.normpath(path)])
+
+    def test_the_frames_of_an_animation_are_found(self):
+        import os
+        import time
+
+        frames = [self.touch("Cam01%04d.png" % i) for i in range(3)]
+        self.touch("Cam01_other.png")
+        found = model.find_written(os.path.join(self.folder, "Cam01.png"), time.time())
+        self.assertEqual(found, sorted(os.path.normpath(f) for f in frames))
+
+    def test_an_old_file_or_none_is_nothing_written(self):
+        import os
+        import time
+
+        path = self.touch("Cam01.png")
+        self.assertEqual(model.find_written(path, time.time() + 60), [])
+        self.assertEqual(model.find_written(os.path.join(self.folder, "missing.png"), 0), [])
+        self.assertEqual(model.find_written("", 0), [])
 
 
 class SharedLists(unittest.TestCase):

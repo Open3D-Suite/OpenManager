@@ -891,8 +891,13 @@ class SceneManager(QtWidgets.QDockWidget):
         return [tuple(x) for x in self.settings.get("resolution_presets") or model.RESOLUTION_PRESETS]
 
     def final_path(self, s):
+        path, problem = self.build_path(s)
+        return path, problem is None
+
+    def build_path(self, s):
+        """(path, what it lacks or None) of the setup's Render Output card."""
         cam = self.scene.camera(s["camera"]["handle"])
-        return model.final_path(
+        return model.build_path(
             s["output"],
             self.scene.file,
             cam["name"] if cam else None,
@@ -977,7 +982,7 @@ class SceneManager(QtWidgets.QDockWidget):
             # a .cxr with another renderer would stop the render with "error creating file output"
             if valid and model.output_problem(path, self.scene.engine_id):
                 valid = False
-            out_path = path if valid else ""
+            out_path = path if valid else None
         refused = []
         acts = maxlink.actions(
             s, self.scene, self.enabled_rows, out_path, rendering, self.opts(), self.rs_default, refused=refused
@@ -1859,16 +1864,24 @@ class SceneManager(QtWidgets.QDockWidget):
             )
             return
         self.reload_scene()
-        issues = self.preflight(jobs)
+        skip, issues = self.preflight(jobs)
+        if len(skip) == len(jobs):
+            QtWidgets.QMessageBox.warning(
+                self,
+                TITLE,
+                "Nothing to render: no setup would save its render.\n\n" + "\n".join("• " + x for x in issues[:25]),
+            )
+            return
         if issues:
             text = "Before rendering, check these setups:\n\n" + "\n".join("• " + x for x in issues[:25])
             if len(issues) > 25:
                 text += "\n… and %d more" % (len(issues) - 25)
-            if QtWidgets.QMessageBox.question(self, TITLE, text + "\n\nRender anyway?") != QtWidgets.QMessageBox.Yes:
+            ask = "Render the others?" if skip else "Render anyway?"
+            if QtWidgets.QMessageBox.question(self, TITLE, text + "\n\n" + ask) != QtWidgets.QMessageBox.Yes:
                 return
         self.save_setups()
         try:
-            self._begin_render(jobs)
+            self._begin_render(jobs, skip)
         except Exception:  # noqa: BLE001 - what a button runs: the batch is not started, printed in the Listener
             traceback.print_exc()
             self.rendering = False
@@ -1879,27 +1892,41 @@ class SceneManager(QtWidgets.QDockWidget):
         cam = self.scene.camera(s["camera"]["handle"])
         return "#%d %s" % (self.index_of(s) + 1, s["scenename"] or (cam["name"] if cam else "(no camera)"))
 
+    def batch_items(self, jobs):
+        """What model.batch_check needs to know of each setup of a batch."""
+        scene_output = maxlink.render_output()
+        items = []
+        for s in jobs:
+            c = s["camera"]
+            item = {
+                "label": self.setup_label(s),
+                "path": "",
+                "problem": None,
+                "camera_gone": c["enabled"] and c.get("handle") is not None and self.scene.camera(c["handle"]) is None,
+            }
+            if s["output"]["enabled"]:
+                path, missing = self.build_path(s)
+                problem = missing or model.output_problem(path, self.scene.engine_id)
+                item.update(path=path if not problem else "", problem=problem)
+            elif scene_output:
+                item["path"] = scene_output
+            else:
+                item["problem"] = "its Render Output card is off and the scene saves no render"
+            items.append(item)
+        return items
+
     def preflight(self, jobs):
-        """What would make a batch fail or overwrite renders, found before hours of rendering."""
-        issues = []
-        seen = {}
+        """What would make a batch fail or overwrite renders, found before hours of rendering: (the ids of the setups
+        to skip, with why, and what else to say)."""
+        skip, issues = {}, []
+        for i, label, why, skipped in model.batch_check(self.batch_items(jobs)):
+            if skipped:
+                skip[jobs[i]["id"]] = why
+                issues.append("%s: %s. It is skipped." % (label, why))
+            else:
+                issues.append("%s: %s" % (label, why))
         for s in jobs:
             name = self.setup_label(s)
-            c = s["camera"]
-            if c["enabled"] and c.get("handle") is not None and self.scene.camera(c["handle"]) is None:
-                issues.append("%s: its camera is not in the scene" % name)
-            if s["output"]["enabled"]:
-                path, valid = self.final_path(s)
-                problem = model.output_problem(path, self.scene.engine_id) if valid else None
-                if not valid:
-                    issues.append("%s: the output path is not complete, the render won't be saved" % name)
-                elif problem:
-                    issues.append("%s: %s, the render won't be saved" % (name, problem))
-                else:
-                    key = os.path.normcase(os.path.normpath(path))
-                    if key in seen:
-                        issues.append("%s: same output file as %s (one overwrites the other)" % (name, seen[key]))
-                    seen.setdefault(key, name)
             for k, label in (("pre_render", "pre-render"), ("post_render", "post-render")):
                 sc = s["scripts"]
                 p = sc[k].get("path", "") if sc.get("enabled") and sc[k].get("enabled") else ""
@@ -1908,13 +1935,16 @@ class SceneManager(QtWidgets.QDockWidget):
             rp = s["render_preset"]
             if rp.get("enabled") and rp.get("path") and not os.path.isfile(rp["path"]):
                 issues.append("%s: the render preset doesn't exist (%s)" % (name, rp["path"]))
-        return issues
+        return skip, issues
 
-    def _begin_render(self, jobs):
+    def _begin_render(self, jobs, skip=None):
         # what the batch would run is asked about once, now, not in the middle of the night
-        self.review([a for s in jobs for a in self.actions_for(s, True)])
+        skip = skip or {}
+        self.review([a for s in jobs if s["id"] not in skip for a in self.actions_for(s, True)])
         self.rendering = True
         self.render_jobs = list(jobs)
+        self.render_skip = dict(skip)
+        self.render_report = []  # (label, "saved" / "skipped" / "failed", where or why), one per setup
         self.render_done = 0
         self.render_failed = []
         self.render_times = []
@@ -1940,27 +1970,42 @@ class SceneManager(QtWidgets.QDockWidget):
         if self.render_cancel or index >= total:
             return self._end_render()
         s = self.render_jobs[index]
+        if s["id"] in self.render_skip:
+            self.render_failed.append((self.setup_label(s), self.render_skip[s["id"]]))
+            self.render_report.append((self.setup_label(s), "skipped", self.render_skip[s["id"]]))
+            QtCore.QTimer.singleShot(0, self._next_job)
+            return
         self.batch.set_job(self._job_label(s), index, total)
         QtWidgets.QApplication.processEvents()
         t0 = time.time()
+        saved_to = ""
         try:
             self.run_actions(self.actions_for(s, True), ask=False)
-            result = maxlink.render()
+            saved_to = maxlink.render_output()
+            result = maxlink.render() if saved_to else "it would save nothing (3ds Max is set not to save the render)"
         except Exception as ex:  # noqa: BLE001 - one setup that fails must not stop a night of rendering; printed and listed
             traceback.print_exc()
             result = str(ex)
         took = time.time() - t0
         if result == "canceled" or maxlink.canceled():
             self.render_cancel = True
+        elif result == "done" and not model.find_written(saved_to, t0):
+            # rendered, but the file is not there: a folder that can't be written, a full disk...
+            why = "nothing was saved to %s" % saved_to
+            self.render_failed.append((self.setup_label(s), why))
+            self.render_report.append((self.setup_label(s), "failed", why))
+            print("OpenScene: render of %s: %s" % (self.setup_label(s), why))
         elif result != "done":
             # one setup that fails (a missing map, a bad path...) must not stop a night of rendering: the next one
             # goes on
             self.render_failed.append((self.setup_label(s), str(result)[:200]))
+            self.render_report.append((self.setup_label(s), "failed", str(result)[:200]))
             print("OpenScene: render of %s failed -> %s" % (self.setup_label(s), result))
         else:
             self.render_done += 1
             self.render_times.append(took)
-            print("OpenScene: rendered %s in %s" % (self.setup_label(s), _duration(took)))
+            self.render_report.append((self.setup_label(s), "saved", saved_to))
+            print("OpenScene: rendered %s in %s, saved to %s" % (self.setup_label(s), _duration(took), saved_to))
         index = self.render_done + len(self.render_failed)
         eta = ""
         if self.render_times and index < total:
@@ -1988,12 +2033,17 @@ class SceneManager(QtWidgets.QDockWidget):
         self.scene_timer.start()  # scene events were left aside while rendering
         took = _duration(time.time() - getattr(self, "render_started", time.time()))
         failed = getattr(self, "render_failed", [])
+        report = getattr(self, "render_report", [])
+        if report:
+            print("OpenScene: Batch Render, %d of %d saved in %s:" % (self.render_done, total, took))
+            for label, what, detail in report:
+                print("  %s: %s (%s)" % (label, what, detail))
         if failed:
             QtWidgets.QMessageBox.warning(
                 self,
                 TITLE,
-                "Batch Render: %d of %d rendered in %s. These failed:\n\n%s"
-                % (self.render_done, total, took, "\n".join("• %s: %s" % f for f in failed[:25])),
+                "Batch Render: %d of %d saved in %s. These were not:\n\n%s\n\nEvery setup is listed in the "
+                "MAXScript Listener." % (self.render_done, total, took, "\n".join("• %s: %s" % f for f in failed[:25])),
             )
         elif self.render_cancel and self.render_done < total:
             self.toast("Batch Render canceled (%d of %d done)" % (self.render_done, total))
