@@ -2,7 +2,7 @@ OpenScene
 Copyright (C) 2026 Daniel Castellanos and OpenScene contributors.
 Licensed under the GNU General Public License, version 3 or later (see LICENSE).
 
-Parts of OpenScene were ported from OpenManager (now archived) (https://github.com/Open3D-Suite/OpenManager),
+Parts of OpenScene were ported from OpenManager (https://github.com/Open3D-Suite/OpenManager, archived),
 Copyright (C) 2026 Carles Llavata and OpenManager contributors, GPL-3.0-or-later, and rewritten for
 OpenScene's code:
 
