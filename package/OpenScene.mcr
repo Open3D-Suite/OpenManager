@@ -1,6 +1,8 @@
 ﻿-- SPDX-License-Identifier: GPL-3.0-or-later
 -- OpenScene: Customize User Interface > Group: Main UI > Category: OpenScene > OpenScene
 -- oscn_home is set by the bundle's start-up script (openscene_bundle.ms): the folder with the openscene package.
+-- 3ds Max loads the macro before that script runs: both names are declared here, so they compile as globals.
+global oscn_home, oscn_isOpen
 
 macroScript OpenScene
     category:"OpenScene"
