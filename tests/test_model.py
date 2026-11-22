@@ -123,6 +123,47 @@ class OtherSceneManager(unittest.TestCase):
         self.assertIsNone(external.convert(None, 1))
 
 
+class PresetFiles(unittest.TestCase):
+    """A .osp file can come from anyone too: it is read with the same checks as a .max file."""
+
+    def test_exported_setups_are_read_back(self):
+        s = model.empty_setup(4)
+        s["scenename"] = "Hall"
+        self.assertEqual(model.read_preset(model.preset_text([s]))[0]["scenename"], "Hall")
+
+    def test_a_plain_list_of_setups_from_earlier_versions_is_read(self):
+        self.assertEqual(len(model.read_preset(json.dumps([{"id": 1}, 5, {"id": 2}]))), 2)
+
+    def test_a_newer_or_broken_preset_is_refused_and_said(self):
+        with self.assertRaisesRegex(ValueError, "newer"):
+            model.read_preset(json.dumps({"version": 7, "setups": []}))
+        with self.assertRaisesRegex(ValueError, "not an OpenScene preset"):
+            model.read_preset("{nope")
+        with self.assertRaisesRegex(ValueError, "no setups"):
+            model.read_preset(json.dumps({"setups": "x"}))
+        with self.assertRaisesRegex(ValueError, "bigger"):
+            model.read_preset(" " * (model.MAX_STORED + 1))
+
+    def test_an_output_preset_takes_only_the_cards_own_settings(self):
+        out = model.read_output_preset(
+            json.dumps(
+                {
+                    "output": {
+                        "enabled": "yes",
+                        "project_path": "D:/renders",
+                        "unknown": 1,
+                        "preset": [{"kind": "Camera"}, {"kind": "Evil", "value": "x"}, 5, {"kind": "Text", "value": 3}],
+                    }
+                }
+            )
+        )
+        self.assertIs(out["enabled"], False)
+        self.assertEqual(out["project_path"], "D:/renders")
+        self.assertNotIn("unknown", out)
+        self.assertEqual([t["kind"] for t in out["preset"]], ["Camera", "Text"])
+        self.assertEqual(out["preset"][1]["value"], "_")  # a value of the wrong kind gets the default
+
+
 class SharedLists(unittest.TestCase):
     def test_the_rows_of_every_setup_make_one_list_in_order(self):
         a, b = model.empty_setup(1), model.empty_setup(2)

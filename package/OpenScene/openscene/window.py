@@ -1641,7 +1641,7 @@ class SceneManager(QtWidgets.QDockWidget):
             return
         try:
             with open(f, "w", encoding="utf-8") as fh:
-                json.dump({"format": "openscene_preset", "setups": chosen}, fh, indent=1)
+                fh.write(model.preset_text(chosen))
             self.toast("Exported %d setup(s)" % len(chosen))
         except (OSError, TypeError, ValueError) as ex:
             self.toast("Could not save the preset: %s" % ex)
@@ -1653,22 +1653,26 @@ class SceneManager(QtWidgets.QDockWidget):
         if not f:
             return
         try:
-            with open(f, "r", encoding="utf-8") as fh:
-                d = json.load(fh)
-            lst = d.get("setups") if isinstance(d, dict) else d
-            if not isinstance(lst, list):
-                raise ValueError("not a list of setups")
-            for s in lst:
-                s = model.normalize(dict(s))
-                s["id"] = self._new_id()
-                maxlink.resolve(s, self.scene)
-                self.setups.append(s)
-            self.rebuild_rows()
-            self.changed(apply=False)
-            self.toast("Imported %d setup(s)" % len(lst))
-        except Exception:  # noqa: BLE001 - a preset file from someone else must not break the window; printed and said
-            traceback.print_exc()
-            self.toast("Could not read that preset")
+            lst = model.read_preset(self._read_preset_file(f))
+        except (OSError, ValueError, UnicodeDecodeError) as ex:
+            print("OpenScene: preset %s not read: %s" % (f, ex))
+            self.toast("Could not read that preset: %s" % ex)
+            return
+        for s in lst:
+            s["id"] = self._new_id()
+            maxlink.resolve(s, self.scene)
+            self.setups.append(s)
+        self.rebuild_rows()
+        self.changed(apply=False)
+        self.toast("Imported %d setup(s)" % len(lst))
+
+    @staticmethod
+    def _read_preset_file(f):
+        """The text of a preset file someone else may have made: refused before it is read when it is too big."""
+        if os.path.getsize(f) > model.MAX_STORED:
+            raise ValueError("the file is bigger than OpenScene reads")
+        with open(f, "r", encoding="utf-8") as fh:
+            return fh.read()
 
     def export_output_preset(self):
         s = self.active()
@@ -1681,9 +1685,12 @@ class SceneManager(QtWidgets.QDockWidget):
             "OpenScene presets (*.osp);;All(*.*)",
         )
         if f:
-            with open(f, "w", encoding="utf-8") as fh:
-                json.dump({"output": s["output"]}, fh, indent=1)
-            self.toast("Output preset saved")
+            try:
+                with open(f, "w", encoding="utf-8") as fh:
+                    fh.write(model.output_preset_text(s["output"]))
+                self.toast("Output preset saved")
+            except (OSError, TypeError, ValueError) as ex:
+                self.toast("Could not save the preset: %s" % ex)
 
     def import_output_preset(self):
         s = self.active()
@@ -1695,17 +1702,15 @@ class SceneManager(QtWidgets.QDockWidget):
         if not f:
             return
         try:
-            with open(f, "r", encoding="utf-8") as fh:
-                d = json.load(fh)
-            out = d["output"]
-            for t in self.targets():
-                t["output"] = dict(out)
-                t["output"]["preset"] = [dict(x) for x in out.get("preset", [])]
-            self.changed()
-            self.refresh_cards([9])
-        except Exception as ex:  # noqa: BLE001 - a preset file from someone else must not break the window; printed and said
-            print("OpenScene: preset not read: %s" % ex)
-            self.toast("Invalid preset")
+            out = model.read_output_preset(self._read_preset_file(f))
+        except (OSError, ValueError, UnicodeDecodeError) as ex:
+            print("OpenScene: output preset %s not read: %s" % (f, ex))
+            self.toast("Could not read that preset: %s" % ex)
+            return
+        for t in self.targets():
+            t["output"] = copy.deepcopy(out)
+        self.changed()
+        self.refresh_cards([9])
 
     # ------------------------------------------------------------ thumbnails, previews, bake
     def thumb_path(self, s):

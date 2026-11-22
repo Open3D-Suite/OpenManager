@@ -807,6 +807,63 @@ def decode(text):
     }
 
 
+# ---------------------------------------------------------------- preset files (.osp; .smp of earlier versions)
+
+PRESET_FORMAT = "openscene_preset"
+
+
+def preset_text(setups):
+    return json.dumps({"format": PRESET_FORMAT, "version": FORMAT_VERSION, "setups": setups}, indent=1)
+
+
+def _preset_data(text):
+    if len(text) > MAX_STORED:
+        raise ValueError("the file is bigger than OpenScene reads")
+    try:
+        d = json.loads(text)
+    except ValueError as error:
+        raise ValueError("it is not an OpenScene preset") from error
+    if isinstance(d, dict):
+        version = d.get("version", 1)
+        if not isinstance(version, int) or isinstance(version, bool):
+            raise ValueError("it has no format version OpenScene knows")
+        if version > FORMAT_VERSION:
+            raise ValueError("it was saved by a newer OpenScene (format %d)" % version)
+    return d
+
+
+def read_preset(text):
+    """The setups of a preset file, checked as those of a .max file are; ValueError says why a file is refused."""
+    d = _preset_data(text)
+    setups = d.get("setups") if isinstance(d, dict) else d
+    if not isinstance(setups, list):
+        raise ValueError("it holds no setups")
+    return [normalize(dict(s)) for s in setups if isinstance(s, dict)][:MAX_SETUPS]
+
+
+def output_preset_text(output):
+    return json.dumps({"format": PRESET_FORMAT, "version": FORMAT_VERSION, "output": output}, indent=1)
+
+
+def read_output_preset(text):
+    """The Render Output card of an output preset file: only its own keys, each of the right kind, and tokens of the
+    kinds the card has. ValueError says why a file is refused."""
+    d = _preset_data(text)
+    out = d.get("output") if isinstance(d, dict) else None
+    if not isinstance(out, dict):
+        raise ValueError("it holds no Render Output settings")
+    base = empty_setup(0)["output"]
+    clean = {k: (out[k] if k in out and _same_kind(v, out[k]) else copy.deepcopy(v)) for k, v in base.items()}
+    tokens = []
+    for t in clean["preset"]:
+        if isinstance(t, dict) and t.get("kind") in TOKEN_TYPES:
+            tok = new_token(t["kind"])
+            tok.update({k: t[k] for k in tok if k in t and _same_kind(tok[k], t[k])})
+            tokens.append(tok)
+    clean["preset"] = tokens
+    return clean
+
+
 # ---------------------------------------------------------------- output path
 
 
