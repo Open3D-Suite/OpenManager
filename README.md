@@ -39,8 +39,13 @@ and start 3ds Max. To remove it, delete that folder with 3ds Max closed.
 OpenManager keeps its settings in `%APPDATA%\Open3D\OpenManager` (one set for every 3ds Max) and everything else it
 writes (HDRI previews, the backup of the interface file made before the toolbar is added, the thumbnails, exports and
 presets of a scene not saved yet) in `%LOCALAPPDATA%\Open3D\OpenManager`; delete those folders too for a clean
-removal. OpenScene 2.x kept its settings in the `plugcfg` folder of each 3ds Max: the first start copies them, and
-the HDRI previews, and leaves the old ones as they were.
+removal.
+
+**Coming from OpenManager 0.x or OpenScene:** the first start copies, once, the settings and HDRI previews of
+OpenManager 0.x (in the same folders, under names of their own: `OpenManager.json`...), of OpenScene 3
+(`%APPDATA%\Open3D\OpenScene`, `%LOCALAPPDATA%\Open3D\OpenScene`) or of OpenScene 2.x (the `plugcfg` folder of
+3ds Max), whichever were changed last, and leaves the old files as they were. The scripts 0.x trusted stay
+trusted. The MAXScript Listener says what was copied, and what has no counterpart here.
 
 ## Use
 

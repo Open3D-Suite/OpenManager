@@ -114,7 +114,16 @@ Update it in the same commit as a change that makes it old.
   each setup keeps its own values. Decided by the author: the scene state carries over between setups, and Corona
   Interactive is not stopped when a setup is applied (`ipr_corona_restart`, off by default).
 - Files: settings in `%APPDATA%\Open3D\OpenManager`, everything else in `%LOCALAPPDATA%\Open3D\OpenManager`, always
-  through `folders.py`. The interface is in English only.
+  through `folders.py`. They are 0.x's folders too: this version's names (`folders.SETTINGS_FILES`,
+  `HDRI_PREVIEWS`...) are never those of 0.x (`version0.SETTINGS_FILE`..., `version0.HDRI`). The interface is in
+  English only.
+- `folders.carry_over`, run by `startup.run` before anything reads the settings, copies once (the file
+  `folders.CARRIED`) the settings of OpenScene 3, OpenScene 2.x (`plugcfg`) or OpenManager 0.x (converted by
+  `version0.settings`), whichever were changed last, and the HDRI previews and the files of unsaved scenes;
+  never over a file that is there, and no old file is ever written. A failed copy leaves that session on the old
+  files (`folders.use`: the settings from a temporary copy of them, the data folders from the old ones), and the
+  next start tries again. The scripts 0.x trusted come as `trusted_code` (files) and `version0.TRUSTED_CODE` (its digests of
+  scripts, which `window.review` trusts once it sees them, `trust.trusted_before`).
 
 ## Traps
 
@@ -132,6 +141,8 @@ Update it in the same commit as a change that makes it old.
   toolbar there.
 - MAXScript can be checked without a window: `3dsmaxbatch` on a script that loads `openmanager_core.ms` and
   `maxlink`, with `OPEN3D_SETTINGS_DIR` and `OPEN3D_DATA_DIR` on a scratch folder, writing its verdict to a file.
-  Never run `openmanager.startup.run` there: it removes the old install from the author's own 3ds Max folders.
+  Run `openmanager.startup.run` there only with `OPENMANAGER_TEST_OLD_FOLDERS` (`startup.TEST_OLD_FOLDERS`) on
+  a scratch folder: without it, it carries over and removes the old installs of the author's own 3ds Max
+  folders.
 - A Corona tone-mapping operator is a `MAXClass` whose `classOf` is `ReferenceTarget` (`maxlink.new_operator`).
 - pymxs raises a MAXScript error as `RuntimeError`; `maxlink.MAX_ERRORS` is what a call into 3ds Max can raise.

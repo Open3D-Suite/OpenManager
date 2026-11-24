@@ -21,6 +21,20 @@ What a user of OpenManager 0.x keeps:
   and the IDs 0.x gave the nodes and layers of its setups, which are found again by handle and name and get
   IDs of this version when the file is saved. The maps 0.x kept for its setups are found too, and its
   environment mixes are taken for mixes, not offered as environments.
+- **Their settings**, copied once, at the first start, from the files 0.x kept in
+  `%APPDATA%\Open3D\OpenManager`: the notification switch, the theme, the cards shown and their layout, the
+  columns, the place of the window, the resolution presets, the Property Selector ticks, the HDRI folders and
+  previews, *Settings > 3ds Max*, and the scripts and render presets 0.x trusted (a file as it is now, a script
+  as soon as a setup runs it again). The files of 0.x are left as they were, and this version never reads them
+  as its own: its files have other names. Not taken, and said in the MAXScript Listener: putting the scene
+  back between setups, and *Always run them* or *Never run them* for the scripts of a file (this version
+  shows them and asks).
+
+A user of OpenScene keeps their settings the same way: those of OpenScene 3 (in `%APPDATA%\Open3D\OpenScene`
+and `%LOCALAPPDATA%\Open3D\OpenScene`, but for its toolbar's files: the OpenManager toolbar is placed anew) or of
+OpenScene 2.x (in `plugcfg`). When both OpenScene and OpenManager 0.x left settings, those changed last are
+taken, and the Listener says so. No file is copied over one that is there; a copy that fails leaves that
+session on the old settings, and the next start tries again.
 
 Version 3.0.0 also follows the rules of the Open3D suite, to be installed and updated by the Open3D launcher.
 
@@ -30,8 +44,7 @@ Version 3.0.0 also follows the rules of the Open3D suite, to be installed and up
 - The **OpenManager toolbar** is added at the first start, once, and only when no toolbar has the button yet. The
   interface file is backed up first in OpenManager's data folder and put back if anything fails.
 - **Settings move** to `%APPDATA%\Open3D\OpenManager`, one set for every 3ds Max, and the HDRI previews to
-  `%LOCALAPPDATA%\Open3D\OpenManager`. The first start copies those of OpenScene 2.x from the `plugcfg` folder
-  and leaves the old ones as they were.
+  `%LOCALAPPDATA%\Open3D\OpenManager`, where the first start copies those of the versions before (above).
 - **Scripts and render presets that come inside a file are asked about before they run**: the Script Editor, Script
   File and Render Preset cards of a `.max` made on another computer. OpenManager shows what would run and asks, with No
   as the answer Enter gives; a no holds until the window is closed. What you write or choose in OpenManager on this

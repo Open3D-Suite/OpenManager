@@ -1072,9 +1072,13 @@ class SceneManager(QtWidgets.QDockWidget):
         """The actions without what this computer doesn't trust. ask: first show what the file would run and ask,
         with No as the answer Enter gives; a no holds until the window is closed."""
         known = self.trusted_digests()
-        pending = [
-            it for it in trust.items(acts) if it.digest and it.digest not in known and it.digest not in self.refused
-        ]
+        found = trust.items(acts)
+        # a script OpenManager 0.x trusted on this computer is trusted here too, once it is seen
+        before = [d for d in trust.trusted_before(found, self.settings.get(version0.TRUSTED_CODE)) if d not in known]
+        if before:
+            self.trust(before)
+            known = self.trusted_digests()
+        pending = [it for it in found if it.digest and it.digest not in known and it.digest not in self.refused]
         if pending and ask:
             if dialogs.ask_safely(self, TITLE, trust.question(pending)):
                 self.trust(it.digest for it in pending)

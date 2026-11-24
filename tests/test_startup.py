@@ -1,12 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The first start: the toolbar added to the interface file, and the copy the old .mzp installer left."""
+"""The first start: the toolbar added to the interface file, the copy the old .mzp installer left, and the
+whole start-up in a stand-in 3ds Max, on the fake old folders of startup.TEST_OLD_FOLDERS."""
 
 import os
 import tempfile
 import unittest
 import xml.etree.ElementTree as ElementTree
+from pathlib import Path
+from unittest import mock
 
-from openmanager import startup, toolbar
+import stand_in  # noqa: E402 - tests/ is on the path (tests/run.py)
+
+from openmanager import folders, startup, toolbar
 
 # a made-up interface file, shaped like the ones 3ds Max writes (CRLF, windows inside CUIWindows)
 CUIX = (
@@ -83,6 +88,52 @@ class OldInstall(unittest.TestCase):
         self.assertEqual(startup.remove([folder]), [])
         self.assertFalse(os.path.exists(folder))
         self.assertEqual(len(startup.remove([os.path.join(scripts, "gone.txt")])), 1)
+
+
+class StartUp(unittest.TestCase):
+    def setUp(self):
+        stand_in.install()
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.old = self.root / "old"
+        variables = {
+            "OPEN3D_SETTINGS_DIR": str(self.root / "settings"),
+            "OPEN3D_DATA_DIR": str(self.root / "data"),
+            startup.TEST_OLD_FOLDERS: str(self.old),
+        }
+        patcher = mock.patch.dict(os.environ, variables)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(folders.use, folders.Carried())
+
+    def write(self, path, text="x"):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def run_start(self):
+        with mock.patch("builtins.print") as said:
+            startup.run()
+        return [c.args[0] for c in said.call_args_list]
+
+    def test_with_the_test_variable_only_its_folders_are_looked_at(self):
+        places = startup.old_places(None)
+        self.assertEqual(set(places), set(startup.OLD_PLACES))
+        for name, folder in places.items():
+            self.assertEqual(Path(folder), self.old / name)
+
+    def test_the_first_start_carries_the_settings_over_and_says_so(self):
+        self.write(self.old / "plugcfg" / "OpenScene.json", '{"theme": {"main": "dark"}}')
+        printed = self.run_start()
+        new = self.root / "settings" / "OpenManager"
+        self.assertEqual((new / "settings.json").read_text(encoding="utf-8"), '{"theme": {"main": "dark"}}')
+        self.assertTrue(printed[0].startswith("OpenManager 3.0.0: "), printed)
+        self.assertIn(
+            "OpenManager: settings of OpenScene 2.x: copied 1 files; the old ones are left as they were", printed
+        )
+        # the next start finds them carried over already
+        self.assertNotIn("settings of", " ".join(self.run_start()))
 
 
 if __name__ == "__main__":

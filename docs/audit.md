@@ -88,8 +88,12 @@ Before a release, on the package of the release, in a 3ds Max started for the te
 2. **The toolbar at the first start**: on an interface without the button, an "OpenManager" toolbar appears, floating;
    restart: no second one. On an interface that has the button already: nothing is added. The backup is in the data
    folder.
-3. **Settings of the earlier version**: with a `plugcfg\OpenScene.json` of 2.x, the first start copies it to the
-   settings folder; the card layout and theme are the same; the old file is still there.
+3. **Settings of the versions before**: with the files of OpenManager 0.x in the settings folder
+   (`OpenManager.json` with trusted scripts, `OpenManager_default.json`, `OpenManager_notify.txt`, and
+   `OpenManager_hdri` in the data folder), the first start converts them: the theme, the card layout and the
+   HDRI folders are the same, a script 0.x trusted runs without asking, the Listener says what was not taken,
+   and the files of 0.x are unchanged. The same with the folders of OpenScene 3, or a `plugcfg\OpenScene.json`
+   of 2.x; with both programs' settings, those changed last are taken. A second start copies nothing.
 4. **An old `.mzp` install**: with 2.x installed in the user scripts folder, the first start removes that copy (the
    Listener says so) and the button keeps working.
 5. **Scripts that come with a file**: a `.max` made on another computer with Script Editor code and a render preset:

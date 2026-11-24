@@ -56,6 +56,7 @@ never asks for them and starts no other program.
 | Images in the HDRI folders the person adds | `cards.HdriCard`, `oscn_hdriPreview` | read by 3ds Max to make a preview |
 | 3ds Max's interface file (`.cuix`), at the first start | `openmanager/toolbar.py` | only read to find the button and to add the toolbar |
 | OpenManager's own settings | `window.load_settings` | read errors are said; a broken file means the defaults |
+| The settings of OpenManager 0.x, OpenScene 3 and OpenScene 2.x, once, at the first start | `folders.carry_over`, `version0.settings` | OpenScene's are copied as they are; 0.x's are converted: only the settings with the same meaning, each of the right kind; the files it trusted are trusted by their contents as they are then |
 
 No clipboard, no command-line arguments, no network.
 

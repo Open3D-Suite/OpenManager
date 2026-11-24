@@ -76,6 +76,20 @@ class Trust(unittest.TestCase):
         self.assertIn('print "hello" (+1 more lines)', text)
         self.assertIn("Run them?", text)
 
+    def test_a_script_openmanager_0x_trusted_is_trusted_here(self):
+        # 0.x kept "code:" and the SHA-256 of the text; its settings bring that list over (version0.TRUSTED_CODE)
+        found = trust.items([("code", 'print "kitchen"'), ("renderscripts", "", "", "x = 1", "y = 2")])
+        old = ["code:7d5f0cb2e8d51b8a4d0c6c1f87a0f9f0d1cbd83c5d6d0b4c1e6d6a3c0e1f2a3b", trust.old_code_key("y = 2")]
+        old.append(trust.old_code_key('print "kitchen"'))
+        self.assertEqual(
+            trust.trusted_before(found, old), [trust.code_digest('print "kitchen"'), trust.code_digest("y = 2")]
+        )
+        self.assertEqual(
+            trust.old_code_key("x"), "code:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"
+        )
+        self.assertEqual(trust.trusted_before(found, None), [])
+        self.assertEqual(trust.trusted_before(found, "code:not a list"), [])
+
 
 if __name__ == "__main__":
     unittest.main()
