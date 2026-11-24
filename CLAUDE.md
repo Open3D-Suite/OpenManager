@@ -117,4 +117,8 @@ Update it in the same commit as a change that makes it old.
 - 3ds Max loads usermacros before the bundles' macroscripts: the bundle's OpenScene macro wins over an old `.mzp` one.
 - In a session without an interface (`3dsmaxbatch`, render nodes) no Qt window can be shown: `startup.run` skips the
   toolbar there.
+- MAXScript can be checked without a window: `3dsmaxbatch` on a script that loads `openscene_core.ms` and `maxlink`,
+  with `OPEN3D_SETTINGS_DIR` and `OPEN3D_DATA_DIR` on a scratch folder, writing its verdict to a file. Never run
+  `openscene.startup.run` there: it removes the old install from the author's own 3ds Max folders.
+- A Corona tone-mapping operator is a `MAXClass` whose `classOf` is `ReferenceTarget` (`maxlink.new_operator`).
 - pymxs raises a MAXScript error as `RuntimeError`; `maxlink.MAX_ERRORS` is what a call into 3ds Max can raise.

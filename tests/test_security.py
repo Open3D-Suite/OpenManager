@@ -112,6 +112,30 @@ class FileNames(unittest.TestCase):
         self.assertIn(("rs", "bloomGlare_enabled", True), acts)
         self.assertEqual(refused, ["Post-Production: evil.path"])
 
+    def test_a_tone_mapping_operator_is_made(self):
+        # 3ds Max says an operator's class is a MAXClass of the kind ReferenceTarget
+        class Max:
+            MAXClass = object()
+
+            def isKindOf(self, c, kind):
+                return kind is self.MAXClass and callable(c)
+
+            def classOf(self, c):
+                return "ReferenceTarget" if c is self.FilmicOperatorPlugin else "GeometryClass"
+
+            def FilmicOperatorPlugin(self):
+                return "an operator"
+
+            def BoxOperatorPlugin(self):
+                return "a box"
+
+        fake = Max()
+        fake.FilmicOperatorPlugin = fake.FilmicOperatorPlugin
+        with mock.patch.object(self.maxlink, "rt", fake):
+            self.assertEqual(self.maxlink.new_operator("FilmicOperatorPlugin"), "an operator")
+            self.assertIsNone(self.maxlink.new_operator("BoxOperatorPlugin"))
+            self.assertIsNone(self.maxlink.new_operator("MissingOperatorPlugin"))
+
     def test_a_tone_mapping_operator_class_that_is_not_one_is_not_made(self):
         self.assertIsNone(self.maxlink.new_operator('Box()); deleteFile "x"; (Box'))
         self.assertIsNone(self.maxlink.new_operator("Teapot"))
