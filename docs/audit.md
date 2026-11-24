@@ -106,21 +106,21 @@ Before a release, on the package of the release, in a 3ds Max started for the te
    closed offers to open it; the setups are there, every card as in 0.x, a message says how many were
    converted and the Listener what was not taken; applying them works; after saving and opening again, the
    setups of this version are read and nothing is asked; OpenManager 0.x's data is still in the file.
-6. **A file saved by a newer OpenManager** (format version above 1): a message says why the setups were not read, and
+7. **A file saved by a newer OpenManager** (format version above 1): a message says why the setups were not read, and
    saving the scene leaves them as they were.
-7. **CXR**: Corona with render elements (LightMix, Z-depth...) and the `.cxr` Extension token: one `.cxr`, no separate
+8. **CXR**: Corona with render elements (LightMix, Z-depth...) and the `.cxr` Extension token: one `.cxr`, no separate
    files per element, that opens in the Corona Image Editor with every layer. With V-Ray: the path shows in orange and
    the check before the batch says so.
-8. **Render Output** with a relative path or `..`: shown in orange, nothing is written.
-9. **Small cards** without a setup active: no vertical scroll bar on Time Output, Resolution, Scene Name, Dome...;
+9. **Render Output** with a relative path or `..`: shown in orange, nothing is written.
+10. **Small cards** without a setup active: no vertical scroll bar on Time Output, Resolution, Scene Name, Dome...;
    switch Time Output between Single, Range and List.
-10. A scene with more than 5000 objects: an object made last, added to Objects, is not *(missing)*.
-11. A merge of a big scene with the window open: it freezes no longer than the merge.
-12. A batch with a broken setup (a script path that does not exist...): the batch goes on and the summary lists it.
-13. Save and open again a `.max` file with many setups or layers: they read back (packed).
-14. **Shared Layers / Objects**: a layer added in one setup is in the others; hidden in one, it stays visible in
+11. A scene with more than 5000 objects: an object made last, added to Objects, is not *(missing)*.
+12. A merge of a big scene with the window open: it freezes no longer than the merge.
+13. A batch with a broken setup (a script path that does not exist...): the batch goes on and the summary lists it.
+14. Save and open again a `.max` file with many setups or layers: they read back (packed).
+15. **Shared Layers / Objects**: a layer added in one setup is in the others; hidden in one, it stays visible in
     another when that one is applied; a new setup has the whole list; removing it removes it from all.
-15. **A `.max` file with setups from before 2.0.0**: it opens with its setups and environment mixes; saved and opened
+16. **A `.max` file with setups from before 2.0.0**: it opens with its setups and environment mixes; saved and opened
     again, they are still there (under the new key).
-16. **An environment Color Correct over an HDRI** in a scene where a material has a Color Correct of the same name:
+17. **An environment Color Correct over an HDRI** in a scene where a material has a Color Correct of the same name:
     choosing it in the Environment card gives the HDRI's background, not the material's colour.
