@@ -2,7 +2,7 @@
 
 What changed for users in each version of OpenScene, newest first.
 
-## In development
+## 3.0.0 — 2026-11-24
 
 Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed and updated by the Open3D launcher.
 
