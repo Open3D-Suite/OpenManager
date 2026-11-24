@@ -39,7 +39,8 @@ Update it in the same commit as a change that makes it old.
   `cards.py` / `cards2.py` (the cards), `widgets.py`, `dialogs.py`, `grid.py`, `icons.py`, `maxlink.py` (everything
   that talks to 3ds Max), and the modules without pymxs or Qt that the tests load: `__init__.py` (`__version__`,
   `APP`), `model.py` (setups, stored text, names a setup may carry), `trust.py` (what may run), `folders.py`,
-  `toolbar.py`, `startup.py`, `external.py` (setups of another scene manager), `open3d_settings.py` (common file).
+  `toolbar.py`, `startup.py`, `external.py` (setups of another scene manager), `version0.py` (what OpenManager
+  0.x left), `open3d_settings.py` (common file).
   `openmanager_core.ms` is the MAXScript side (every global `oscn_`), `OpenManager_startup.ms` the file-open check.
 - `package/OpenManager.mcr`: the macro. `bundle/openmanager_bundle.ms`: the bundle's post-start-up script.
 - `tools/build.py` → `dist/OpenManager.bundle`; `tools/check_ms.py`: the MAXScript check; `tools/props_source.py` →
@@ -90,6 +91,12 @@ Update it in the same commit as a change that makes it old.
   Never reuse or change these IDs: a scripted attribute redefined with the same ID and other parameters wipes the
   data. Card ids, the `props` keys (`card|class|property`) and the setting file names need a migration to change;
   `PackageContents.xml`'s ProductCode and UpgradeCode (OpenManager's, those of 0.x) never change.
+- `maxlink.read_setups` takes the setups of this version (`OpenScene_Dat`), else those of OpenManager 0.x
+  (`OpenManager_Dat`, `version0.convert`), else those under the keys before 2.0.0, else another scene
+  manager's; 0.x's and the other's are converted and never written. 0.x's go through `model.from_stored`,
+  the checks of this version's own, lose their lasting IDs (another app data slot) and their base state, and
+  what is left out is said in the Listener. 0.x's maps (`OpenManager_Maps`) are walked, never changed, and
+  its mix maps (`OM_EnvMix*`) count as mixes.
 - A setup comes inside a file from anyone. Whatever it runs goes through `SceneManager.review()`; a name it carries
   is checked (`model.is_plain_name`, `oscn_classNamed`, never `execute`); stored text goes through `model.decode` /
   `model.read_preset`, which refuse a newer `FORMAT_VERSION`. A new place that turns text into code must be added to

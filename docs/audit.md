@@ -95,6 +95,10 @@ Before a release, on the package of the release, in a 3ds Max started for the te
 5. **Scripts that come with a file**: a `.max` made on another computer with Script Editor code and a render preset:
    applying a setup asks first, Enter answers No and nothing runs; yes runs them and they are not asked again; after
    editing the code it is asked again. A batch asks once, before it starts.
+6. **A scene of OpenManager 0.x**: a `.max` saved with setups by OpenManager 0.x: opening it with the window
+   closed offers to open it; the setups are there, every card as in 0.x, a message says how many were
+   converted and the Listener what was not taken; applying them works; after saving and opening again, the
+   setups of this version are read and nothing is asked; OpenManager 0.x's data is still in the file.
 6. **A file saved by a newer OpenManager** (format version above 1): a message says why the setups were not read, and
    saving the scene leaves them as they were.
 7. **CXR**: Corona with render elements (LightMix, Z-depth...) and the `.cxr` Extension token: one `.cxr`, no separate

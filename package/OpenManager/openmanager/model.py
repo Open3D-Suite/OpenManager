@@ -941,6 +941,11 @@ def decode(text):
         data = json.loads(text)
     except ValueError:
         return None
+    return from_stored(data)
+
+
+def from_stored(data):
+    """decode, once the stored text is read as JSON: None when `data` holds no setups."""
     if not (isinstance(data, dict) and isinstance(data.get("setups"), list)):
         return None
     version = data.get("version", 1)

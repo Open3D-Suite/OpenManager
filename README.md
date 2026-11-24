@@ -60,8 +60,9 @@ Post-Production / VFB (Corona), Script File, Script Editor, Thumbnail, Todo and 
 - **Scripts and render presets that come inside a file** (the Script Editor, Script File and Render Preset cards of a
   `.max` made elsewhere) are shown and asked about before they run, with **No** as the answer Enter gives. What you
   write or choose in OpenManager on this computer runs without asking.
-- Setups another scene manager saved in a `.max` are read and converted; once the file is saved with OpenManager's
-  own, nothing is asked again.
+- **Setups OpenManager 0.x saved in a `.max`** are read and converted, every card, and so are those another
+  scene manager saved; the MAXScript Listener says what could not be taken. Their data stays in the file as
+  it was, and once the file is saved with OpenManager's own setups, nothing is asked again.
 - Setup and output presets are `.osp` files (`.smp` files exported earlier open too).
 - **Double-click a card's colour bar** to fold it to the bar; again to unfold it.
 

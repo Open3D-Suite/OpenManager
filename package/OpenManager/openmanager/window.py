@@ -9,7 +9,7 @@ import traceback
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, trust, widgets
+from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, trust, version0, widgets
 from .widgets import PRIMARY, TINTS, Blocker, Card, GridBoard, blend, icon, menu_tool, pal, text_color, tool
 
 VERSION = __version__
@@ -733,6 +733,14 @@ class SceneManager(QtWidgets.QDockWidget):
             # written with the file next time it is saved: from then on these are the setups (the others are not
             # read again)
             self.last_saved = None
+        elif source == "openmanager0":
+            for line in version0.report(data):
+                print(line)
+            self.toast(
+                "Converted %d setup(s) of %s in this file (see the MAXScript Listener)"
+                % (len(self.setups), version0.NAME)
+            )
+            self.last_saved = None  # written with the file, as for another scene manager; 0.x's stay as they are
         elif source == "legacy":
             self.last_saved = None  # saved again under the new name with the file
         self.resolve_scene_refs()

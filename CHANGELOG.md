@@ -11,6 +11,17 @@ OpenManager. Everything you see is called OpenManager: the bundle (`OpenManager.
 `%APPDATA%\Open3D\OpenManager` and `%LOCALAPPDATA%\Open3D\OpenManager`. Scenes made with OpenScene keep their
 setups, which stay where OpenScene saved them.
 
+What a user of OpenManager 0.x keeps:
+
+- **The setups of their scenes.** A `.max` with setups of OpenManager 0.x opens with them, converted, every
+  card as 0.x kept it; the file-open check offers to open the window to convert them, a message says how many
+  were converted, and the MAXScript Listener says what was not taken. Saving the file adds the setups of this
+  version, which are the ones read from then on; those of 0.x stay in the file as they were. Not taken: the
+  scene state 0.x kept to put back between setups (this version leaves the scene as the setup before left it),
+  and the IDs 0.x gave the nodes and layers of its setups, which are found again by handle and name and get
+  IDs of this version when the file is saved. The maps 0.x kept for its setups are found too, and its
+  environment mixes are taken for mixes, not offered as environments.
+
 Version 3.0.0 also follows the rules of the Open3D suite, to be installed and updated by the Open3D launcher.
 
 - **Installed as a plug-in bundle**, `OpenManager.bundle` in `%APPDATA%\Autodesk\ApplicationPlugins`, by the launcher

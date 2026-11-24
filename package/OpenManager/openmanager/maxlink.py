@@ -8,7 +8,7 @@ import tempfile
 import pymxs
 from pymxs import runtime as rt
 
-from . import external, model
+from . import external, model, version0
 
 # What a call into 3ds Max raises through pymxs: a MAXScript error comes as RuntimeError; a renderer or a property
 # this 3ds Max does not have, as AttributeError or TypeError; a value it cannot take, as ValueError.
@@ -80,7 +80,8 @@ class Scene(object):
         return None
 
     def env_is_mix(self):
-        return bool(self.env_name) and str(self.env_name).startswith("OSCN_EnvMix")
+        """Whether the environment is a map that mixes the tabs of the Environment card (one of 0.x too)."""
+        return bool(self.env_name) and str(self.env_name).startswith(("OSCN_EnvMix", version0.MIX_PREFIX))
 
     def offered_maps(self, keep=None):
         """Maps of the Environment list: what it offers, plus the ones in `keep` so a choice never disappears."""
@@ -760,11 +761,19 @@ def save_setups(text):
 
 
 def read_setups(first_id):
-    """Our own setups (also those saved before 2.0.0, under an old key), else the ones another scene manager saved
-    in this file (converted, not changed)."""
+    """Our own setups (also those saved before 2.0.0, under an old key), else those OpenManager 0.x kept, else the
+    ones another scene manager saved in this file; the last two converted, never changed."""
     ours = model.decode(rt.oscn_readKey(rt.Name(DATA_KEY)))
     if ours is not None:
         return ours, "ours"
+    zero = version0.convert(str(rt.oscn_readKey(rt.Name(version0.KEY))))
+    if zero is not None and zero["setups"]:
+        return zero, "openmanager0"
+    if zero is not None and zero["problem"]:
+        print(
+            "OpenManager: the setups %s kept in this file were not read: %s. They are left as they are."
+            % (version0.NAME, zero["problem"])
+        )
     old = model.decode(str(rt.oscn_readOldSetups()))
     if old is not None:
         rt.oscn_renameOldMixMaps()

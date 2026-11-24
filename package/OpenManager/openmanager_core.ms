@@ -150,8 +150,9 @@ fn oscn_hdrLevel m =
     best
 )
 
--- the maps that mix the tabs of the Environment card: made and kept by the tool, never offered in its list
-fn oscn_isMixMap m = (try (matchPattern m.name pattern:"OSCN_EnvMix*") catch false)
+-- the maps that mix the tabs of the Environment card: made and kept by the tool (OM_EnvMix by OpenManager 0.x), never
+-- offered in its list
+fn oscn_isMixMap m = (try ((matchPattern m.name pattern:"OSCN_EnvMix*") or (matchPattern m.name pattern:"OM_EnvMix*")) catch false)
 
 fn oscn_addEnvMap found offer m yes =
 (
@@ -242,6 +243,8 @@ fn oscn_allMaps =
     for m in (oscn_editorMaps()) do oscn_walk m found seen
     try (for i = 1 to meditMaterials.count do oscn_walk meditMaterials[i] found seen) catch()
     try (for m in rootNode.OpenScene_Maps do oscn_walk m found seen) catch()
+    -- the maps OpenManager 0.x held for its setups, which are read and converted: only read, never changed
+    try (for m in rootNode.OpenManager_Maps do oscn_walk m found seen) catch()
     oscn_walkProps renderers.current found seen
     for c in cameras where (superclassof c == camera) do oscn_walkProps c found seen
     for lt in lights where (superclassof lt == light) do oscn_walkProps lt found seen
@@ -332,6 +335,7 @@ fn oscn_findMap cls nm =
     try (local t = renderers.current.environment_texture; if (t != undefined) do oscn_chainInto t inEnv) catch()
     local kept = #()
     try (for k in rootNode.OpenScene_Maps where (k != undefined) do oscn_chainInto k kept) catch()
+    try (for k in rootNode.OpenManager_Maps where (k != undefined) do oscn_chainInto k kept) catch()
     local best = same[1]
     local bestScore = -1
     for m in same do
