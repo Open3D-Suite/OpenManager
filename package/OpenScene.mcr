@@ -21,8 +21,9 @@ macroScript OpenScene
         )
         else
         (
-            -- the path is the bundle's own folder, never text read from a file
-            python.Execute ("import sys\nd = r'" + oscn_home + "'\nif d not in sys.path: sys.path.insert(0, d)\nimport openscene\nopenscene.toggle()")
+            -- the path is the bundle's own folder, never text read from a file; between double quotes, which a
+            -- Windows path cannot hold (an apostrophe it can: a user called O'Brien)
+            python.Execute ("import sys\nd = r\"" + oscn_home + "\"\nif d not in sys.path: sys.path.insert(0, d)\nimport openscene\nopenscene.toggle()")
         )
     )
 )

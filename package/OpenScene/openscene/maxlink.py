@@ -238,7 +238,7 @@ def new_operator(cls):
         print("OpenScene: refused a tone-mapping operator of class %r (not an operator's name)" % (cls,))
         return None
     c = getattr(rt, cls, None)
-    if c is None or str(rt.classOf(c)) != "MAXClass":
+    if c is None or not rt.isKindOf(c, rt.MAXClass) or str(rt.classOf(c)) != "ReferenceTarget":
         print("OpenScene: this 3ds Max has no tone-mapping operator %s" % cls)
         return None
     return c()

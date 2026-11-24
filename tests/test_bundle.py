@@ -70,6 +70,12 @@ class Bundle(unittest.TestCase):
         self.assertTrue((contents / "OpenScene" / "openscene" / "window.py").is_file())
         self.assertTrue((contents / "OpenScene" / "openscene_core.ms").is_file())
 
+    def test_a_path_with_an_apostrophe_starts_too(self):
+        # the folder goes into a line of Python: between double quotes, which a Windows path cannot hold
+        for part in ("scripts/openscene_bundle.ms", "macroscripts/OpenScene.mcr"):
+            script = (self.bundle / "Contents" / part).read_text(encoding="utf-8-sig")
+            self.assertIn('d = r\\"" + oscn_home + "\\"', script)
+
     def test_no_compiled_python_goes_in(self):
         found = [p for p in self.bundle.rglob("*") if p.name == "__pycache__" or p.suffix in (".pyc", ".pyo")]
         self.assertEqual(found, [])

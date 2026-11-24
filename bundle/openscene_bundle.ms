@@ -6,8 +6,9 @@
 global oscn_home, oscn_settingsDir
 (
     oscn_home = pathConfig.normalizePath ((getFilenamePath (getThisScriptFilename())) + "..\\OpenScene")
-    -- the path is the bundle's own folder, never text read from a file
-    local py = "import sys\nd = r'" + oscn_home + "'\nif d not in sys.path: sys.path.insert(0, d)\n"
+    -- the path is the bundle's own folder, never text read from a file; between double quotes, which a Windows path
+    -- cannot hold (an apostrophe it can: a user called O'Brien)
+    local py = "import sys\nd = r\"" + oscn_home + "\"\nif d not in sys.path: sys.path.insert(0, d)\n"
     try (python.Execute (py + "import openscene.startup\nopenscene.startup.run()"))
     catch (format "OpenScene: start-up failed: %\n" (getCurrentException()))
     fileIn (oscn_home + "\\OpenScene_startup.ms")
