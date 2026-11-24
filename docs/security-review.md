@@ -67,8 +67,8 @@ No clipboard, no command-line arguments, no network.
 | The setups, in the `.max` file (the `OpenScene_Dat` and `OpenScene_Maps` attributes of the root node) | that is where a setup lives; saved with the file |
 | Renders, where each setup's Render Output says | what the person asked for |
 | Thumbnails, exports and render presets of a saved scene, in folders next to the `.max` file (`OpenManager_thumbs`, `OpenManager_export`, `OpenManager_presets`) | what the person asked for; a scene not saved yet uses the data folder |
-| 3ds Max's interface file (`.cuix`), once, at the first start | to add the OpenManager toolbar; backed up in the data folder first and put back if anything fails (`toolbar.place`) |
-| The files of an old `.mzp` install of OpenScene in 3ds Max's user folders, removed at the first start | so the old copy does not run beside the bundle; only those exact files, and the scripts folder only when it holds this package (`startup.old_install`); settings are left |
+| 3ds Max's interface file (`.cuix`), once, at the first start | to add the OpenManager toolbar, or to make the buttons of OpenScene run OpenManager's action (`toolbar.with_old_buttons_moved`); backed up in the data folder first and put back if anything fails (`toolbar.place`) |
+| The files of an old `.mzp` install of OpenScene or of OpenManager 0.x in 3ds Max's user folders, and an `OpenScene.bundle` in `ApplicationPlugins`, removed at the first start | so the old copy does not run beside the bundle; only those exact files: the scripts folder only when it holds that version's package, the macro and the start-up script only when they hold its text, the icons by their exact names, the bundle only with OpenScene's ProductCode (`startup.old_install`, `startup.old_bundle`); settings are left |
 | `%TEMP%\oscn_post.conf` | the Corona post-production of setups stored by older versions, loaded from there |
 | Batch Render views of 3ds Max, `.max` files baked into the export folder | Bake Setups, when the person runs it |
 

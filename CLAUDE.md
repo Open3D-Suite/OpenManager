@@ -41,7 +41,8 @@ Update it in the same commit as a change that makes it old.
   `APP`), `model.py` (setups, stored text, names a setup may carry), `trust.py` (what may run), `folders.py`,
   `toolbar.py`, `startup.py`, `external.py` (setups of another scene manager), `version0.py` (what OpenManager
   0.x left), `open3d_settings.py` (common file).
-  `openmanager_core.ms` is the MAXScript side (every global `oscn_`), `OpenManager_startup.ms` the file-open check.
+  `openmanager_core.ms` is the MAXScript side (every global `oscn_`, OpenScene's prefix: OpenManager 0.x's
+  `omgr_` is what its leftovers still define), `OpenManager_startup.ms` the file-open check.
 - `package/OpenManager.mcr`: the macro. `bundle/openmanager_bundle.ms`: the bundle's post-start-up script.
 - `tools/build.py` → `dist/OpenManager.bundle`; `tools/check_ms.py`: the MAXScript check; `tools/props_source.py` →
   `tools/make_props.py` → `openmanager/props.json` (the Property Selector tables).
@@ -83,7 +84,8 @@ Update it in the same commit as a change that makes it old.
   versions before 2.0.0 (`oscn_oldDat`, `oscn_oldMaps`, `oscn_oldMix` in `openmanager_core.ms`, the key list in
   `OpenManager_startup.ms`, `model.OLD_COMPRESSED_PREFIX`), and OpenScene's names: what it stored in scenes and files
   (`OpenScene_Dat`, `OpenScene_Maps`, `"format": "openscene"`, `model.PRESET_FORMAT`), the `oscn_` prefix, its old
-  files (`folders.OLD_FILES`, `startup.OLD_*`), and the lines of the README and the CHANGELOG that say so.
+  files and folders (`folders.OLD_FILES`, `folders.OPENSCENE`, `startup.MZPS`, `startup.OLD_BUNDLE`,
+  `toolbar.OLD_ACTION`), and the lines of the README and the CHANGELOG that say so.
 - Own work only: the labels, ranges and defaults of `tools/props_source.py` are written here; property *names* are
   the renderers' API and must match exactly.
 - Setups live on `rootNode` in `OpenScene_Dat` (`oscn_data`, attribID `0x4f53cd21, 0x2e6a9b74`), maps in
@@ -136,7 +138,10 @@ Update it in the same commit as a change that makes it old.
 - MAXScript has no call to add a button to a toolbar: `toolbar.py` edits the `.cuix` (UTF-8 with a byte order mark,
   CRLF; keep both) after `cui.saveConfig`, then `cui.loadConfig`.
 - 3ds Max loads usermacros before the bundles' macroscripts: the bundle's OpenManager macro wins over an old `.mzp`
-  one.
+  one. `startup.remove_old_installs` removes the files of the `.mzp` of OpenScene and of 0.x (`startup.MZPS`) and
+  an `OpenScene.bundle` with OpenScene's ProductCode; the bundle's script takes away 0.x's file-open check
+  (`#omgrStartup`). An `OpenScene.bundle` still installed sets `oscn_home` in that session: the macro reads
+  `oscn_bundleHome`, and `toolbar.with_old_buttons_moved` makes OpenScene's buttons run OpenManager.
 - In a session without an interface (`3dsmaxbatch`, render nodes) no Qt window can be shown: `startup.run` skips the
   toolbar there.
 - MAXScript can be checked without a window: `3dsmaxbatch` on a script that loads `openmanager_core.ms` and

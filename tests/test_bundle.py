@@ -75,7 +75,7 @@ class Bundle(unittest.TestCase):
         # the folder goes into a line of Python: between double quotes, which a Windows path cannot hold
         for part in ("scripts/openmanager_bundle.ms", "macroscripts/OpenManager.mcr"):
             script = (self.bundle / "Contents" / part).read_text(encoding="utf-8-sig")
-            self.assertIn('d = r\\"" + oscn_home + "\\"', script)
+            self.assertIn('d = r\\"" + oscn_bundleHome + "\\"', script)
 
     def test_no_compiled_python_goes_in(self):
         found = [p for p in self.bundle.rglob("*") if p.name == "__pycache__" or p.suffix in (".pyc", ".pyo")]
@@ -86,10 +86,24 @@ class Bundle(unittest.TestCase):
         self.assertFalse(names & {"install.ms", "mzp.run", "uninstall.ms"})
 
     def test_the_start_script_finds_the_package_next_to_it(self):
-        # openmanager_bundle.ms points oscn_home at Contents/OpenManager, one folder up from scripts/
+        # openmanager_bundle.ms points oscn_bundleHome at Contents/OpenManager, one folder up from scripts/
         script = (self.bundle / "Contents" / "scripts" / "openmanager_bundle.ms").read_text(encoding="utf-8-sig")
         self.assertIn('"..\\\\OpenManager"', script)
         self.assertTrue(os.path.isdir(self.bundle / "Contents" / "OpenManager"))
+
+    def test_the_macro_reads_a_folder_an_openscene_bundle_never_sets(self):
+        # an OpenScene.bundle still installed sets oscn_home in the session this bundle removes it: the macro must not
+        # take that folder for this one's
+        for part in ("scripts/openmanager_bundle.ms", "macroscripts/OpenManager.mcr"):
+            text = (self.bundle / "Contents" / part).read_text(encoding="utf-8-sig")
+            code = "\n".join(line.split("--")[0] for line in text.splitlines())
+            self.assertIn("oscn_bundleHome", code)
+            self.assertNotIn("oscn_home", code)
+
+    def test_the_start_script_takes_away_the_file_open_check_of_0x(self):
+        # a start-up script of OpenManager 0.x, left by its .mzp, adds one in the session its files are removed
+        script = (self.bundle / "Contents" / "scripts" / "openmanager_bundle.ms").read_text(encoding="utf-8-sig")
+        self.assertIn("callbacks.removeScripts id:#omgrStartup", script)
 
 
 if __name__ == "__main__":

@@ -87,15 +87,18 @@ Before a release, on the package of the release, in a 3ds Max started for the te
    OpenManager macro opens the window, the icon shows in both themes.
 2. **The toolbar at the first start**: on an interface without the button, an "OpenManager" toolbar appears, floating;
    restart: no second one. On an interface that has the button already: nothing is added. The backup is in the data
-   folder.
+   folder. On an interface with the OpenScene toolbar (or an OpenScene button on a toolbar of one's own): the
+   button opens OpenManager and the toolbar is called OpenManager, with no second one.
 3. **Settings of the versions before**: with the files of OpenManager 0.x in the settings folder
    (`OpenManager.json` with trusted scripts, `OpenManager_default.json`, `OpenManager_notify.txt`, and
    `OpenManager_hdri` in the data folder), the first start converts them: the theme, the card layout and the
    HDRI folders are the same, a script 0.x trusted runs without asking, the Listener says what was not taken,
    and the files of 0.x are unchanged. The same with the folders of OpenScene 3, or a `plugcfg\OpenScene.json`
    of 2.x; with both programs' settings, those changed last are taken. A second start copies nothing.
-4. **An old `.mzp` install**: with 2.x installed in the user scripts folder, the first start removes that copy (the
-   Listener says so) and the button keeps working.
+4. **Older installs**: with OpenScene 2.x or OpenManager 0.x installed by its `.mzp` in the user folders, or an
+   `OpenScene.bundle` in `ApplicationPlugins`, the first start removes them (the Listener says what), files of
+   one's own beside them stay, and the button keeps working. An `OpenScene.bundle` started in the same session
+   leaves the OpenManager button working.
 5. **Scripts that come with a file**: a `.max` made on another computer with Script Editor code and a render preset:
    applying a setup asks first, Enter answers No and nothing runs; yes runs them and they are not asked again; after
    editing the code it is asked again. A batch asks once, before it starts.

@@ -24,7 +24,7 @@ DOOR = re.compile(
 # file -> (how many doors, why each is safe)
 KNOWN = {
     "bundle/openmanager_bundle.ms": (2, "python.Execute of the bundle's own folder; fileIn of its own start-up script"),
-    "package/OpenManager.mcr": (1, "python.Execute of the bundle's own folder (oscn_home), set by the bundle"),
+    "package/OpenManager.mcr": (1, "python.Execute of the bundle's own folder (oscn_bundleHome), set by the bundle"),
     "package/OpenManager/openmanager/maxlink.py": (1, "fileIn of openmanager_core.ms, next to the package"),
     "package/OpenManager/openmanager_core.ms": (
         4,

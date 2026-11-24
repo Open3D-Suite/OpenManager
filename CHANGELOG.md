@@ -39,10 +39,14 @@ session on the old settings, and the next start tries again.
 Version 3.0.0 also follows the rules of the Open3D suite, to be installed and updated by the Open3D launcher.
 
 - **Installed as a plug-in bundle**, `OpenManager.bundle` in `%APPDATA%\Autodesk\ApplicationPlugins`, by the launcher
-  or by hand. The `.mzp` installer and the uninstaller are retired: the first start of the bundle removes the copy the
-  `.mzp` installed (your settings stay).
+  or by hand. The `.mzp` installer and the uninstaller are retired: the first start of the bundle removes what the
+  `.mzp` of OpenScene or of OpenManager 0.x installed in 3ds Max's user folders, and an `OpenScene.bundle` in
+  `ApplicationPlugins` (your settings stay). Only their own files are taken, and the MAXScript Listener says what
+  was removed.
 - The **OpenManager toolbar** is added at the first start, once, and only when no toolbar has the button yet. The
-  interface file is backed up first in OpenManager's data folder and put back if anything fails.
+  interface file is backed up first in OpenManager's data folder and put back if anything fails. The buttons of
+  OpenScene, on its toolbar or on one of your own, open OpenManager instead, and the OpenScene toolbar takes
+  OpenManager's name; the buttons of OpenManager 0.x keep working, as the action is the same.
 - **Settings move** to `%APPDATA%\Open3D\OpenManager`, one set for every 3ds Max, and the HDRI previews to
   `%LOCALAPPDATA%\Open3D\OpenManager`, where the first start copies those of the versions before (above).
 - **Scripts and render presets that come inside a file are asked about before they run**: the Script Editor, Script

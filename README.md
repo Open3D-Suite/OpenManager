@@ -31,8 +31,11 @@ and start 3ds Max. To remove it, delete that folder with 3ds Max closed.
 - The first start adds an **OpenManager** toolbar with the button, floating: drag it where you want it. Nothing is
   added when a toolbar already has the button. The action is also in *Customize > Customize User Interface*, **Group:
   Main UI**, **Category: OpenManager**, to put it on another toolbar or in a menu.
-- The **`.mzp` is retired**: OpenScene up to 2.2.2 came as `OpenScene.mzp`. If it was installed with it, the first
-  start of the bundle removes that copy (your settings stay and are carried over).
+- The **`.mzp` is retired**: OpenScene up to 2.2.2 came as `OpenScene.mzp`, and OpenManager up to 0.3.0
+  as `OpenManager.mzp`. The first start of the bundle removes what they installed in 3ds Max's user folders, and
+  an `OpenScene.bundle` in `ApplicationPlugins`: only their own files, said in the MAXScript Listener (your
+  settings stay and are carried over). A button of OpenScene, on its toolbar or on one of yours, then opens
+  OpenManager, and a button of OpenManager 0.x keeps working: it is the same action.
 - Setups are saved **inside the `.max` file** (the `OpenScene_Dat` attribute of the root node, the name it has had
   since OpenScene). Installing or removing OpenManager never touches them.
 
