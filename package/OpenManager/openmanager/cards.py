@@ -1266,7 +1266,7 @@ class ObjectsCard(Card):
             try:
                 self.sm.scene.add_objects(maxlink.nodes_info(unknown))
             except maxlink.MAX_ERRORS as ex:
-                print("OpenScene: objects not read from the scene: %s" % ex)
+                print("OpenManager: objects not read from the scene: %s" % ex)
         n = len(shared)
         self.count.setText("%d object%s" % (n, "" if n == 1 else "s") if n else "Select objects in the scene, then +")
         with Blocker(self.table):
@@ -1770,7 +1770,7 @@ class HdriCard(Card):
 
     @staticmethod
     def cache_dir():
-        return folders.data_path(folders.HDRI_PREVIEWS) or os.path.join(os.path.expanduser("~"), "OpenScene", "hdri")
+        return folders.data_path(folders.HDRI_PREVIEWS) or os.path.join(os.path.expanduser("~"), "OpenManager", "hdri")
 
     def cache_file(self, raw):
         try:
@@ -1939,7 +1939,7 @@ class HdriCard(Card):
         try:
             ok = maxlink.hdri_preview(raw, cached)
         except maxlink.MAX_ERRORS as ex:
-            print("OpenScene: preview of %s -> %s" % (raw, ex))
+            print("OpenManager: preview of %s -> %s" % (raw, ex))
         if ok:
             try:
                 self._set_picture(it, cached)

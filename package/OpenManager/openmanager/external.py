@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Optional compatibility reader: setups that another scene manager keeps inside a .max (the SceneManager_Dat key
-on the root node, base64 JSON), converted to OpenScene setups. Only reads that data, never writes it.
+on the root node, base64 JSON), converted to OpenManager setups. Only reads that data, never writes it.
 
 Nothing else depends on this module: deleting it (with its two uses in maxlink.read_setups and the check in
-OpenScene_startup.ms) removes the feature.
+OpenManager_startup.ms) removes the feature.
 """
 
 import base64

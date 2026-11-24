@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The OpenScene window: a dock that lives inside 3ds Max (floating or docked)."""
+"""The OpenManager window: a dock that lives inside 3ds Max (floating or docked)."""
 
 import copy
 import json
@@ -9,12 +9,12 @@ import traceback
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, trust, widgets
+from . import __version__, cards, cards2, dialogs, folders, icons, maxlink, model, trust, version0, widgets
 from .widgets import PRIMARY, TINTS, Blocker, Card, GridBoard, blend, icon, menu_tool, pal, text_color, tool
 
 VERSION = __version__
-TITLE = "OpenScene"
-OBJECT_NAME = "OpenScene"
+TITLE = "OpenManager"
+OBJECT_NAME = "OpenManager"
 TOP_ICON = 22
 
 # setup list columns: (key, title); the first three are fixed
@@ -41,8 +41,8 @@ def _duration(sec):
 
 
 def unsaved_dir():
-    """Where the thumbnails, exports and presets of a scene not saved yet go: OpenScene's data folder."""
-    return folders.data_path(folders.UNSAVED) or os.path.join(os.path.expanduser("~"), "OpenScene")
+    """Where the thumbnails, exports and presets of a scene not saved yet go: OpenManager's data folder."""
+    return folders.data_path(folders.UNSAVED) or os.path.join(os.path.expanduser("~"), "OpenManager")
 
 
 def settings_path():
@@ -473,7 +473,7 @@ class SceneManager(QtWidgets.QDockWidget):
         tl.addSpacing(8)
         tl.addWidget(self._top_tool("gear", "Settings", slot=self.open_settings))
         self.logo = QtWidgets.QLabel()
-        self.logo.setToolTip("OpenScene %s" % VERSION)
+        self.logo.setToolTip("OpenManager %s" % VERSION)
         tl.addSpacing(4)
         tl.addWidget(self.logo)
         v.addWidget(top)
@@ -521,7 +521,7 @@ class SceneManager(QtWidgets.QDockWidget):
                 with open(path, "r", encoding="utf-8") as f:
                     d = json.load(f)
             except (OSError, ValueError) as error:
-                print("OpenScene: settings not read from %s: %s" % (path, error))
+                print("OpenManager: settings not read from %s: %s" % (path, error))
                 continue
             if isinstance(d, dict):
                 if "layouts" in d and not isinstance(d["layouts"], dict):
@@ -544,7 +544,7 @@ class SceneManager(QtWidgets.QDockWidget):
         except (RuntimeError, AttributeError, TypeError, ValueError):
             pass
         if settings_path() is None:
-            print("OpenScene: settings not saved: Windows gives no folder for them (APPDATA is not set)")
+            print("OpenManager: settings not saved: Windows gives no folder for them (APPDATA is not set)")
             return
         if getattr(self, "typed_here", None):
             st["trusted_code"] = trust.remember(st.get("trusted_code") or [], list(self.typed_here.values()))
@@ -552,7 +552,7 @@ class SceneManager(QtWidgets.QDockWidget):
             folders.write_json(settings_path(), st)
             folders.write_text(notify_flag_path(), "1" if st.get("notify", True) else "0")
         except (OSError, TypeError, ValueError) as ex:
-            print("OpenScene: could not save settings: %s" % ex)
+            print("OpenManager: could not save settings: %s" % ex)
 
     def opts(self):
         return dict(dialogs.DEFAULT_SETTINGS_MAX, **self.settings.get("max", {}))
@@ -714,18 +714,18 @@ class SceneManager(QtWidgets.QDockWidget):
         self.rs_default = data.get("rs_default") or {}
         self.next_id = max([s["id"] for s in self.setups] + [0]) + 1
         self.last_saved = self.encoded()
-        # setups OpenScene could not take (a newer format, too big, damaged) stay in the file as they are
+        # setups OpenManager could not take (a newer format, too big, damaged) stay in the file as they are
         self.stored_problem = data.get("problem")
         if self.stored_problem:
             print(
-                "OpenScene: the setups of this file were not read whole: %s. They are left as they are."
+                "OpenManager: the setups of this file were not read whole: %s. They are left as they are."
                 % self.stored_problem
             )
             QtWidgets.QMessageBox.warning(
                 self,
                 TITLE,
                 "The setups of this file were not read whole: %s.\n\n"
-                "OpenScene leaves them as they are in the file: what you change now is not "
+                "OpenManager leaves them as they are in the file: what you change now is not "
                 "saved in it." % self.stored_problem,
             )
         if source == "external":
@@ -733,6 +733,14 @@ class SceneManager(QtWidgets.QDockWidget):
             # written with the file next time it is saved: from then on these are the setups (the others are not
             # read again)
             self.last_saved = None
+        elif source == "openmanager0":
+            for line in version0.report(data):
+                print(line)
+            self.toast(
+                "Converted %d setup(s) of %s in this file (see the MAXScript Listener)"
+                % (len(self.setups), version0.NAME)
+            )
+            self.last_saved = None  # written with the file, as for another scene manager; 0.x's stay as they are
         elif source == "legacy":
             self.last_saved = None  # saved again under the new name with the file
         self.resolve_scene_refs()
@@ -808,7 +816,7 @@ class SceneManager(QtWidgets.QDockWidget):
         raw = maxlink.read_scene_raw(self.object_handles())
         self._read_cost = time.time() - t
         if self._read_cost > 1.0:
-            print("OpenScene: reading the scene took %.1f s" % self._read_cost)
+            print("OpenManager: reading the scene took %.1f s" % self._read_cost)
         return raw
 
     def reload_scene(self, raw=None):
@@ -1037,7 +1045,7 @@ class SceneManager(QtWidgets.QDockWidget):
         if fresh:
             self.announced.update(fresh)
             for r in fresh:
-                print("OpenScene: setup %s: left out %s (a setup may not set it)" % (s.get("id"), r))
+                print("OpenManager: setup %s: left out %s (a setup may not set it)" % (s.get("id"), r))
             self.toast("%d setting(s) of this file were left out (see the MAXScript Listener)" % len(fresh))
         return acts
 
@@ -1064,9 +1072,13 @@ class SceneManager(QtWidgets.QDockWidget):
         """The actions without what this computer doesn't trust. ask: first show what the file would run and ask,
         with No as the answer Enter gives; a no holds until the window is closed."""
         known = self.trusted_digests()
-        pending = [
-            it for it in trust.items(acts) if it.digest and it.digest not in known and it.digest not in self.refused
-        ]
+        found = trust.items(acts)
+        # a script OpenManager 0.x trusted on this computer is trusted here too, once it is seen
+        before = [d for d in trust.trusted_before(found, self.settings.get(version0.TRUSTED_CODE)) if d not in known]
+        if before:
+            self.trust(before)
+            known = self.trusted_digests()
+        pending = [it for it in found if it.digest and it.digest not in known and it.digest not in self.refused]
         if pending and ask:
             if dialogs.ask_safely(self, TITLE, trust.question(pending)):
                 self.trust(it.digest for it in pending)
@@ -1079,7 +1091,7 @@ class SceneManager(QtWidgets.QDockWidget):
             self.announced.update(it.digest or it.preview for it in fresh)
             for it in fresh:
                 why = "it cannot be read" if it.digest is None else "not trusted on this computer"
-                print("OpenScene: not run (%s): %s" % (why, it.preview))
+                print("OpenManager: not run (%s): %s" % (why, it.preview))
             self.toast("%d script(s) or preset(s) of this file were not run (see the MAXScript Listener)" % len(fresh))
         return out
 
@@ -1677,7 +1689,7 @@ class SceneManager(QtWidgets.QDockWidget):
         sel = self.selected_setups()
         chosen = sel if len(sel) > 1 else self.setups
         f, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Preset", os.path.join(self._start_dir(), "setups.osp"), "OpenScene presets (*.osp);;All(*.*)"
+            self, "Save Preset", os.path.join(self._start_dir(), "setups.osp"), "OpenManager presets (*.osp);;All(*.*)"
         )
         if not f:
             return
@@ -1690,14 +1702,14 @@ class SceneManager(QtWidgets.QDockWidget):
 
     def import_setups(self):
         f, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Load Preset", self._start_dir(), "OpenScene presets (*.osp *.smp);;All(*.*)"
+            self, "Load Preset", self._start_dir(), "OpenManager presets (*.osp *.smp);;All(*.*)"
         )
         if not f:
             return
         try:
             lst = model.read_preset(self._read_preset_file(f))
         except (OSError, ValueError, UnicodeDecodeError) as ex:
-            print("OpenScene: preset %s not read: %s" % (f, ex))
+            print("OpenManager: preset %s not read: %s" % (f, ex))
             self.toast("Could not read that preset: %s" % ex)
             return
         for s in lst:
@@ -1712,7 +1724,7 @@ class SceneManager(QtWidgets.QDockWidget):
     def _read_preset_file(f):
         """The text of a preset file someone else may have made: refused before it is read when it is too big."""
         if os.path.getsize(f) > model.MAX_STORED:
-            raise ValueError("the file is bigger than OpenScene reads")
+            raise ValueError("the file is bigger than OpenManager reads")
         with open(f, "r", encoding="utf-8") as fh:
             return fh.read()
 
@@ -1724,7 +1736,7 @@ class SceneManager(QtWidgets.QDockWidget):
             self,
             "Save Output Preset",
             os.path.join(self._start_dir(), "output.osp"),
-            "OpenScene presets (*.osp);;All(*.*)",
+            "OpenManager presets (*.osp);;All(*.*)",
         )
         if f:
             try:
@@ -1739,14 +1751,14 @@ class SceneManager(QtWidgets.QDockWidget):
         if s is None:
             return
         f, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Load Output Preset", self._start_dir(), "OpenScene presets (*.osp *.smp);;All(*.*)"
+            self, "Load Output Preset", self._start_dir(), "OpenManager presets (*.osp *.smp);;All(*.*)"
         )
         if not f:
             return
         try:
             out = model.read_output_preset(self._read_preset_file(f))
         except (OSError, ValueError, UnicodeDecodeError) as ex:
-            print("OpenScene: output preset %s not read: %s" % (f, ex))
+            print("OpenManager: output preset %s not read: %s" % (f, ex))
             self.toast("Could not read that preset: %s" % ex)
             return
         for t in self.targets():
@@ -1758,7 +1770,7 @@ class SceneManager(QtWidgets.QDockWidget):
     def thumb_path(self, s):
         folder = self.scene.folder or unsaved_dir()
         stem = os.path.splitext(self.scene.file or "untitled")[0]
-        return os.path.join(folder, "OpenScene_thumbs", "%s_%03d.png" % (stem, s["id"])).replace("\\", "/")
+        return os.path.join(folder, "OpenManager_thumbs", "%s_%03d.png" % (stem, s["id"])).replace("\\", "/")
 
     def fetch_thumbnail(self, s, kind):
         if s is None:
@@ -1832,7 +1844,7 @@ class SceneManager(QtWidgets.QDockWidget):
         for s in self.setups:
             cam = self.scene.camera(s["camera"]["handle"])
             s["_label"] = s["scenename"] or (cam["name"] if cam else "")
-        folder = os.path.join(self.scene.folder or unsaved_dir(), "OpenScene_export").replace("\\", "/")
+        folder = os.path.join(self.scene.folder or unsaved_dir(), "OpenManager_export").replace("\\", "/")
         dlg = dialogs.BakeDialog(self, self.setups, folder)
         for s in self.setups:
             s.pop("_label", None)
@@ -1861,7 +1873,7 @@ class SceneManager(QtWidgets.QDockWidget):
                     return
                 path, valid = self.final_path(s)
                 preset = os.path.join(
-                    self.scene.folder or unsaved_dir(), "OpenScene_presets", "%s_%s.rps" % (stem, label(s, i))
+                    self.scene.folder or unsaved_dir(), "OpenManager_presets", "%s_%s.rps" % (stem, label(s, i))
                 ).replace("\\", "/")
                 maxlink.save_preset(preset)
                 maxlink.batch_view(
@@ -2040,18 +2052,18 @@ class SceneManager(QtWidgets.QDockWidget):
             why = "nothing was saved to %s" % saved_to
             self.render_failed.append((self.setup_label(s), why))
             self.render_report.append((self.setup_label(s), "failed", why))
-            print("OpenScene: render of %s: %s" % (self.setup_label(s), why))
+            print("OpenManager: render of %s: %s" % (self.setup_label(s), why))
         elif result != "done":
             # one setup that fails (a missing map, a bad path...) must not stop a night of rendering: the next one
             # goes on
             self.render_failed.append((self.setup_label(s), str(result)[:200]))
             self.render_report.append((self.setup_label(s), "failed", str(result)[:200]))
-            print("OpenScene: render of %s failed -> %s" % (self.setup_label(s), result))
+            print("OpenManager: render of %s failed -> %s" % (self.setup_label(s), result))
         else:
             self.render_done += 1
             self.render_times.append(took)
             self.render_report.append((self.setup_label(s), "saved", saved_to))
-            print("OpenScene: rendered %s in %s, saved to %s" % (self.setup_label(s), _duration(took), saved_to))
+            print("OpenManager: rendered %s in %s, saved to %s" % (self.setup_label(s), _duration(took), saved_to))
         index = self.render_done + len(self.render_failed)
         eta = ""
         if self.render_times and index < total:
@@ -2081,7 +2093,7 @@ class SceneManager(QtWidgets.QDockWidget):
         failed = getattr(self, "render_failed", [])
         report = getattr(self, "render_report", [])
         if report:
-            print("OpenScene: Batch Render, %d of %d saved in %s:" % (self.render_done, total, took))
+            print("OpenManager: Batch Render, %d of %d saved in %s:" % (self.render_done, total, took))
             for label, what, detail in report:
                 print("  %s: %s (%s)" % (label, what, detail))
         if failed:

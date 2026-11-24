@@ -1,8 +1,9 @@
-# OpenScene
+# OpenManager
 
 Scene setups and batch rendering for 3ds Max: a setup, stored inside the `.max` file, says what one shot needs
 (camera, resolution, environment, layers, render settings...) and Batch Render renders the ticked ones. One 3ds Max
-plug-in, written in Python (Qt, pymxs) and MAXScript; nothing is compiled.
+plug-in, written in Python (Qt, pymxs) and MAXScript; nothing is compiled. It was called OpenScene up to 2.2.2, and
+it replaces OpenManager 0.x (archived as `Open3D-Suite/OpenManager-Legacy`).
 
 This file holds facts about this repo only, each one checkable in the code, and how we work on it.
 Update it in the same commit as a change that makes it old.
@@ -20,10 +21,10 @@ Update it in the same commit as a change that makes it old.
 - **Commits.** Small, one step each, with one English sentence in the imperative. A format commit carries no code
   change. A change a user can notice gets its entry in `CHANGELOG.md`, under `## In development`, in the same commit.
   Commit as the repository's author (`git log -1 --format='%an <%ae>'`).
-- **Pull requests.** Changes reach `main` through pull requests: work on a branch, the CI passes, someone reviews it,
-  then it is merged.
+- **Pull requests.** Changes reach `main` through pull requests: work on a branch, the CI passes, then it is
+  merged. The author merges their own; a change from someone else waits for the author's review.
 - **Nothing goes out without the author's explicit OK:** no push, no tag, no release. A release stays a draft on
-  GitHub, and Open3D's maintainer publishes it. Tags are annotated, `vX.Y.Z`, and pushed one at a time, never with
+  GitHub until the author publishes it, once `tools\check.ps1 -Full` and the real test as a user passed. Tags are annotated, `vX.Y.Z`, and pushed one at a time, never with
   `--tags`. Never rewrite published history.
 - **Nothing is deleted without asking the author first,** each time.
 - **After a change** the plug-in must pass `tools\check.ps1` and load in 3ds Max.
@@ -34,22 +35,24 @@ Update it in the same commit as a change that makes it old.
 
 ## Layout
 
-- `package/OpenScene/`: what goes in the bundle. `openscene/` is the Python package: `window.py` (the dock),
+- `package/OpenManager/`: what goes in the bundle. `openmanager/` is the Python package: `window.py` (the dock),
   `cards.py` / `cards2.py` (the cards), `widgets.py`, `dialogs.py`, `grid.py`, `icons.py`, `maxlink.py` (everything
   that talks to 3ds Max), and the modules without pymxs or Qt that the tests load: `__init__.py` (`__version__`,
   `APP`), `model.py` (setups, stored text, names a setup may carry), `trust.py` (what may run), `folders.py`,
-  `toolbar.py`, `startup.py`, `external.py` (setups of another scene manager), `open3d_settings.py` (common file).
-  `openscene_core.ms` is the MAXScript side (every global `oscn_`), `OpenScene_startup.ms` the file-open check.
-- `package/OpenScene.mcr`: the macro. `bundle/openscene_bundle.ms`: the bundle's post-start-up script.
-- `tools/build.py` → `dist/OpenScene.bundle`; `tools/check_ms.py`: the MAXScript check; `tools/props_source.py` →
-  `tools/make_props.py` → `openscene/props.json` (the Property Selector tables).
+  `toolbar.py`, `startup.py`, `external.py` (setups of another scene manager), `version0.py` (what OpenManager
+  0.x left), `open3d_settings.py` (common file).
+  `openmanager_core.ms` is the MAXScript side (every global `oscn_`, OpenScene's prefix: OpenManager 0.x's
+  `omgr_` is what its leftovers still define), `OpenManager_startup.ms` the file-open check.
+- `package/OpenManager.mcr`: the macro. `bundle/openmanager_bundle.ms`: the bundle's post-start-up script.
+- `tools/build.py` → `dist/OpenManager.bundle`; `tools/check_ms.py`: the MAXScript check; `tools/props_source.py` →
+  `tools/make_props.py` → `openmanager/props.json` (the Property Selector tables).
 - `tests/`: the tests without 3ds Max; `tests/run.py` runs them. `docs/audit.md`: limits, ideas, the test list in
   3ds Max. `docs/security-review.md`: what the review before the launcher needs.
 
 ## Build and check
 
-- `python tools/build.py` writes `dist/OpenScene.bundle`: it runs `tools/check_ms.py` (stops on a problem), copies
-  `package/OpenScene` to `Contents/OpenScene`, the macro to `Contents/macroscripts`, draws the icons into
+- `python tools/build.py` writes `dist/OpenManager.bundle`: it runs `tools/check_ms.py` (stops on a problem), copies
+  `package/OpenManager` to `Contents/OpenManager`, the macro to `Contents/macroscripts`, draws the icons into
   `Contents/icons/Dark|Light`, and writes `PackageContents.xml` from `__version__`, then checks it.
 - `tools\check.ps1` runs every check, and all must pass; it needs Python 3.11 or newer and the ruff that `ruff.toml`
   names. Built in: the version agrees, every `.py`, `.ms`, `.mcr` and `.ps1` has its licence line, no file holds a
@@ -58,33 +61,44 @@ Update it in the same commit as a change that makes it old.
 - CI: `.github/workflows/check.yml` runs `tools\check.ps1`, without `-Full`, on every push and pull request to `main`,
   on GitHub's Windows runner, with Python 3.11 and 3.13.
 - `.editorconfig`, `.gitattributes`, `ruff.toml`, `LICENSE`, `tools/check.ps1`, `tools/repo*.py` and
-  `openscene/open3d_settings.py` are Open3D's common files: never change them here. Only the end of `.gitattributes`
-  and `ruff.toml`, after `# Specific to this repository.`, is this repo's.
+  `openmanager/open3d_settings.py` are Open3D's common files: never change them here. Only the end of
+  `.gitattributes` and `ruff.toml`, after `# Specific to this repository.`, is this repo's.
 - After changing `tools/props_source.py`, run `python tools/make_props.py` and commit `props.json`.
 
 ## Version and release
 
-- The version is `__version__` in `openscene/__init__.py`; the README's status line repeats it, and `tools/build.py`
-  writes it into `PackageContents.xml` (`AppVersion` and every `ComponentEntry`). `python -I tools/repo.py version set
-  X.Y.Z` writes both places.
+- The version is `__version__` in `openmanager/__init__.py`; the README's status line repeats it, and
+  `tools/build.py` writes it into `PackageContents.xml` (`AppVersion` and every `ComponentEntry`). `python -I
+  tools/repo.py version set X.Y.Z` writes both places.
 - `python -I tools/repo.py package` needs the version's `## X.Y.Z` section in `CHANGELOG.md`, runs the quick checks
-  and `tools/build.py`, and writes `dist/openscene-<version>-windows-x64-3dsmax.zip` (with `OpenScene.bundle` at its
-  root and `LICENSE` inside it) and `dist/SHA256SUMS.txt`. `release X.Y.Z` makes the tag and then the draft.
-- The launcher needs `OpenScene.bundle` at the root of the zip, with the release's version in `PackageContents.xml`.
+  and `tools/build.py`, and writes `dist/openmanager-<version>-windows-x64-3dsmax.zip` (with `OpenManager.bundle` at
+  its root and `LICENSE` inside it) and `dist/SHA256SUMS.txt`. `release X.Y.Z` makes the tag and then the draft.
+- The launcher needs `OpenManager.bundle` at the root of the zip, with the release's version in
+  `PackageContents.xml`. It lists OpenManager already, so a release is offered as an update to the users of 0.x.
 
 ## Rules of this code
 
 - A bug that is fixed comes with a test that fails without the fix, and new logic comes with its tests.
-- Never name the tool's former names or the reference program it was inspired by, in code, comments, UI, docs,
-  commits or file names; it is "another scene manager". The only traces allowed are the keys that convert files of
-  versions before 2.0.0: `oscn_oldDat`, `oscn_oldMaps`, `oscn_oldMix` in `openscene_core.ms`, the key list in
-  `OpenScene_startup.ms`, `model.OLD_COMPRESSED_PREFIX`.
+- Never name the reference program the tool was inspired by, in code, comments, UI, docs, commits or file names; it
+  is "another scene manager". Former names of the tool appear only where older versions are read: the keys of the
+  versions before 2.0.0 (`oscn_oldDat`, `oscn_oldMaps`, `oscn_oldMix` in `openmanager_core.ms`, the key list in
+  `OpenManager_startup.ms`, `model.OLD_COMPRESSED_PREFIX`), and OpenScene's names: what it stored in scenes and files
+  (`OpenScene_Dat`, `OpenScene_Maps`, `"format": "openscene"`, `model.PRESET_FORMAT`), the `oscn_` prefix, its old
+  files and folders (`folders.OLD_FILES`, `folders.OPENSCENE`, `startup.MZPS`, `startup.OLD_BUNDLE`,
+  `toolbar.OLD_ACTION`), and the lines of the README and the CHANGELOG that say so.
 - Own work only: the labels, ranges and defaults of `tools/props_source.py` are written here; property *names* are
   the renderers' API and must match exactly.
 - Setups live on `rootNode` in `OpenScene_Dat` (`oscn_data`, attribID `0x4f53cd21, 0x2e6a9b74`), maps in
-  `OpenScene_Maps` (`0x4f53cd22, 0x2e6a9b75`). Never reuse or change these IDs: a scripted attribute redefined with
-  the same ID and other parameters wipes the data. Card ids, the `props` keys (`card|class|property`) and the setting
-  file names need a migration to change; `PackageContents.xml`'s ProductCode and UpgradeCode never change.
+  `OpenScene_Maps` (`0x4f53cd22, 0x2e6a9b75`): the names OpenScene gave them, kept so that its scenes keep working.
+  Never reuse or change these IDs: a scripted attribute redefined with the same ID and other parameters wipes the
+  data. Card ids, the `props` keys (`card|class|property`) and the setting file names need a migration to change;
+  `PackageContents.xml`'s ProductCode and UpgradeCode (OpenManager's, those of 0.x) never change.
+- `maxlink.read_setups` takes the setups of this version (`OpenScene_Dat`), else those of OpenManager 0.x
+  (`OpenManager_Dat`, `version0.convert`), else those under the keys before 2.0.0, else another scene
+  manager's; 0.x's and the other's are converted and never written. 0.x's go through `model.from_stored`,
+  the checks of this version's own, lose their lasting IDs (another app data slot) and their base state, and
+  what is left out is said in the Listener. 0.x's maps (`OpenManager_Maps`) are walked, never changed, and
+  its mix maps (`OM_EnvMix*`) count as mixes.
 - A setup comes inside a file from anyone. Whatever it runs goes through `SceneManager.review()`; a name it carries
   is checked (`model.is_plain_name`, `oscn_classNamed`, never `execute`); stored text goes through `model.decode` /
   `model.read_preset`, which refuse a newer `FORMAT_VERSION`. A new place that turns text into code must be added to
@@ -95,14 +109,23 @@ Update it in the same commit as a change that makes it old.
 - Nodes and layers a setup uses carry a lasting ID in their app data (slot `oscn_uidSlot`, "OSID"; never another
   tool's), stamped when the setups are saved (`window.stamp_uids`) and followed by ID, then handle, then name
   (`oscn_resolveNodes`, `model.apply_resolved`, `model.follow_layer_renames`).
-- The author decided that the improvements brought in from OpenManager (archived) are the author's work: it was
-  made under the author's direction, so it carries no credit of its own. Never bring its property tables or anything
-  that names the reference program.
+- The author decided that the improvements brought in from OpenManager 0.x are the author's work: it was made under
+  the author's direction, so it carries no credit of its own. Never bring its property tables or anything that names
+  the reference program.
 - Layers and Objects show one list for all setups (`model.shared_rows`, `cards.share_rows`, `window.share_lists`);
   each setup keeps its own values. Decided by the author: the scene state carries over between setups, and Corona
   Interactive is not stopped when a setup is applied (`ipr_corona_restart`, off by default).
-- Files: settings in `%APPDATA%\Open3D\OpenScene`, everything else in `%LOCALAPPDATA%\Open3D\OpenScene`, always
-  through `folders.py`. The interface is in English only.
+- Files: settings in `%APPDATA%\Open3D\OpenManager`, everything else in `%LOCALAPPDATA%\Open3D\OpenManager`, always
+  through `folders.py`. They are 0.x's folders too: this version's names (`folders.SETTINGS_FILES`,
+  `HDRI_PREVIEWS`...) are never those of 0.x (`version0.SETTINGS_FILE`..., `version0.HDRI`). The interface is in
+  English only.
+- `folders.carry_over`, run by `startup.run` before anything reads the settings, copies once (the file
+  `folders.CARRIED`) the settings of OpenScene 3, OpenScene 2.x (`plugcfg`) or OpenManager 0.x (converted by
+  `version0.settings`), whichever were changed last, and the HDRI previews and the files of unsaved scenes;
+  never over a file that is there, and no old file is ever written. A failed copy leaves that session on the old
+  files (`folders.use`: the settings from a temporary copy of them, the data folders from the old ones), and the
+  next start tries again. The scripts 0.x trusted come as `trusted_code` (files) and `version0.TRUSTED_CODE` (its digests of
+  scripts, which `window.review` trusts once it sees them, `trust.trusted_before`).
 
 ## Traps
 
@@ -114,11 +137,17 @@ Update it in the same commit as a change that makes it old.
   compiles as an empty local.
 - MAXScript has no call to add a button to a toolbar: `toolbar.py` edits the `.cuix` (UTF-8 with a byte order mark,
   CRLF; keep both) after `cui.saveConfig`, then `cui.loadConfig`.
-- 3ds Max loads usermacros before the bundles' macroscripts: the bundle's OpenScene macro wins over an old `.mzp` one.
+- 3ds Max loads usermacros before the bundles' macroscripts: the bundle's OpenManager macro wins over an old `.mzp`
+  one. `startup.remove_old_installs` removes the files of the `.mzp` of OpenScene and of 0.x (`startup.MZPS`) and
+  an `OpenScene.bundle` with OpenScene's ProductCode; the bundle's script takes away 0.x's file-open check
+  (`#omgrStartup`). An `OpenScene.bundle` still installed sets `oscn_home` in that session: the macro reads
+  `oscn_bundleHome`, and `toolbar.with_old_buttons_moved` makes OpenScene's buttons run OpenManager.
 - In a session without an interface (`3dsmaxbatch`, render nodes) no Qt window can be shown: `startup.run` skips the
   toolbar there.
-- MAXScript can be checked without a window: `3dsmaxbatch` on a script that loads `openscene_core.ms` and `maxlink`,
-  with `OPEN3D_SETTINGS_DIR` and `OPEN3D_DATA_DIR` on a scratch folder, writing its verdict to a file. Never run
-  `openscene.startup.run` there: it removes the old install from the author's own 3ds Max folders.
+- MAXScript can be checked without a window: `3dsmaxbatch` on a script that loads `openmanager_core.ms` and
+  `maxlink`, with `OPEN3D_SETTINGS_DIR` and `OPEN3D_DATA_DIR` on a scratch folder, writing its verdict to a file.
+  Run `openmanager.startup.run` there only with `OPENMANAGER_TEST_OLD_FOLDERS` (`startup.TEST_OLD_FOLDERS`) on
+  a scratch folder: without it, it carries over and removes the old installs of the author's own 3ds Max
+  folders.
 - A Corona tone-mapping operator is a `MAXClass` whose `classOf` is `ReferenceTarget` (`maxlink.new_operator`).
 - pymxs raises a MAXScript error as `RuntimeError`; `maxlink.MAX_ERRORS` is what a call into 3ds Max can raise.

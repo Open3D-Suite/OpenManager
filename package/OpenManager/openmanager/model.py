@@ -718,7 +718,7 @@ def shared_rows(setups, key, field):
 #
 # A setup points at nodes by handle (camera, suns, dome, the rows of the Objects card, the Lights card) and at layers
 # by name. A merge gives nodes new handles and a rename changes names, so every reference also keeps a lasting ID
-# ("uid", which OpenScene writes in the node's or the layer's app data: oscn_stampNodes / oscn_stampLayers) and the
+# ("uid", which OpenManager writes in the node's or the layer's app data: oscn_stampNodes / oscn_stampLayers) and the
 # name. The scene is asked where each reference is now (oscn_resolveNodes): by ID, then by handle, then by name.
 
 
@@ -915,7 +915,7 @@ def _unpack(packed):
     except (ValueError, zlib.error) as error:
         raise ValueError("the stored setups are damaged") from error
     if d.unconsumed_tail:
-        raise ValueError("the stored setups are bigger than OpenScene reads")
+        raise ValueError("the stored setups are bigger than OpenManager reads")
     return raw.decode("utf-8")
 
 
@@ -930,7 +930,7 @@ def decode(text):
     if not text:
         return None
     if len(text) > MAX_STORED:
-        return _refused("the stored setups are bigger than OpenScene reads")
+        return _refused("the stored setups are bigger than OpenManager reads")
     prefix = next((p for p in (COMPRESSED_PREFIX, OLD_COMPRESSED_PREFIX) if text.startswith(p)), None)
     if prefix:
         try:
@@ -941,13 +941,18 @@ def decode(text):
         data = json.loads(text)
     except ValueError:
         return None
+    return from_stored(data)
+
+
+def from_stored(data):
+    """decode, once the stored text is read as JSON: None when `data` holds no setups."""
     if not (isinstance(data, dict) and isinstance(data.get("setups"), list)):
         return None
     version = data.get("version", 1)
     if not isinstance(version, int) or isinstance(version, bool):
-        return _refused("the stored setups have no format version OpenScene knows")
+        return _refused("the stored setups have no format version OpenManager knows")
     if version > FORMAT_VERSION:
-        return _refused("they were saved by a newer OpenScene (format %d): update OpenScene to use them" % version)
+        return _refused("they were saved by a newer OpenManager (format %d): update OpenManager to use them" % version)
     setups = [normalize(s) for s in data["setups"] if isinstance(s, dict)]
     problem = None
     if len(setups) > MAX_SETUPS:
@@ -984,17 +989,17 @@ def preset_text(setups):
 
 def _preset_data(text):
     if len(text) > MAX_STORED:
-        raise ValueError("the file is bigger than OpenScene reads")
+        raise ValueError("the file is bigger than OpenManager reads")
     try:
         d = json.loads(text)
     except ValueError as error:
-        raise ValueError("it is not an OpenScene preset") from error
+        raise ValueError("it is not an OpenManager preset") from error
     if isinstance(d, dict):
         version = d.get("version", 1)
         if not isinstance(version, int) or isinstance(version, bool):
-            raise ValueError("it has no format version OpenScene knows")
+            raise ValueError("it has no format version OpenManager knows")
         if version > FORMAT_VERSION:
-            raise ValueError("it was saved by a newer OpenScene (format %d)" % version)
+            raise ValueError("it was saved by a newer OpenManager (format %d)" % version)
     return d
 
 

@@ -3,8 +3,8 @@
 
 A setup lives inside a .max file, and a .max file can come from anyone. What a setup can run (the MAXScript of the
 Script Editor card, the files of the Script File card, the render preset of the Render Preset card) runs only once
-this computer trusts it: it was written or chosen in this computer's own OpenScene window, or the person said yes
-when OpenScene showed it. Trust is kept as a digest of the exact text (and, for a file, of its path and its
+this computer trusts it: it was written or chosen in this computer's own OpenManager window, or the person said yes
+when OpenManager showed it. Trust is kept as a digest of the exact text (and, for a file, of its path and its
 contents), so a script changed afterwards, here or by someone else, is asked about again.
 
 No pymxs and no Qt: the tests load this module as it is.
@@ -30,6 +30,11 @@ def code_digest(text):
     return hashlib.sha256(("code\0" + text).encode("utf-8")).hexdigest()
 
 
+def old_code_key(text):
+    """What OpenManager 0.x kept for a script it trusted: "code:" and the SHA-256 of its exact text."""
+    return "code:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def file_digest(path):
     """The digest of a file's path and contents, or None when it cannot be read (it will not run then either)."""
     try:
@@ -45,12 +50,14 @@ def file_digest(path):
 
 
 class Item:
-    """One thing a setup would run: what it is (shown to the person), its digest and a short look at it."""
+    """One thing a setup would run: what it is (shown to the person), its digest and a short look at it; for a
+    script, the key OpenManager 0.x kept when it trusted it (old_key)."""
 
-    def __init__(self, title, digest, preview):
+    def __init__(self, title, digest, preview, old_key=None):
         self.title = title
         self.digest = digest
         self.preview = preview
+        self.old_key = old_key
 
     def __repr__(self):
         return "Item(%r)" % self.title
@@ -71,7 +78,7 @@ def items(acts):
 
     def code(title, text):
         if text and text.strip():
-            out.append(Item(title, code_digest(text), _code_preview(text)))
+            out.append(Item(title, code_digest(text), _code_preview(text), old_code_key(text)))
 
     def a_file(title, path):
         if path:
@@ -126,6 +133,13 @@ def allowed_actions(acts, ok):
     return out, left_out
 
 
+def trusted_before(found, old_keys):
+    """The digests of the Items `found` that OpenManager 0.x trusted on this computer, by the keys it kept
+    (`old_keys`, carried over with its settings): they are trusted here too."""
+    keys = {k for k in old_keys if isinstance(k, str)} if isinstance(old_keys, list) else set()
+    return [it.digest for it in found if it.old_key and it.old_key in keys and it.digest]
+
+
 def remember(trusted, digests):
     """The trusted digests with these added at the end (the newest last), at most MAX_TRUSTED."""
     out = [d for d in trusted if d not in digests]
@@ -140,7 +154,7 @@ def question(pending):
         lines.append("• ...and %d more" % (len(pending) - 12))
     presets = any(it.title == "Render preset" for it in pending)
     return (
-        "The setups of this file run scripts or render presets that were not written or chosen in OpenScene on this "
+        "The setups of this file run scripts or render presets that were not written or chosen in OpenManager on this "
         "computer:\n\n%s\n\nA script can do anything 3ds Max can do. Run them only if you trust where this file comes "
         "from.%s\n\nRun them?"
         % (

@@ -39,7 +39,7 @@ class SafeQuestion(unittest.TestCase):
 
         cls.QtCore, cls.QtTest, cls.QtWidgets = QtCore, QtTest, QtWidgets
         cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-        from openscene import dialogs
+        from openmanager import dialogs
 
         cls.dialogs = dialogs
 
@@ -54,7 +54,7 @@ class SafeQuestion(unittest.TestCase):
             do(box, yes, no)
 
         QtCore.QTimer.singleShot(0, act)
-        return self.dialogs.ask_safely(None, "OpenScene", "Run them?")
+        return self.dialogs.ask_safely(None, "OpenManager", "Run them?")
 
     def test_enter_says_no_even_on_the_yes_button(self):
         def press_enter_on_yes(box, yes, no):

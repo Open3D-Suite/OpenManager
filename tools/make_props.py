@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Builds openscene/props.json (the Property Selector table) from tools/props_source.py.
+"""Builds openmanager/props.json (the Property Selector table) from tools/props_source.py.
 
 python tools/make_props.py
 """
@@ -10,7 +10,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-OUT = os.path.join(ROOT, "package", "OpenScene", "openscene", "props.json")
+OUT = os.path.join(ROOT, "package", "OpenManager", "openmanager", "props.json")
 sys.path.insert(0, HERE)
 from props_source import TABLES  # noqa: E402
 

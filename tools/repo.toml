@@ -6,7 +6,7 @@
 # pattern whose one group is the version; "^" is the start of a line. The bundle's PackageContents.xml
 # is not a place: tools/build.py writes it from the source.
 [version]
-source = { file = "package/OpenScene/openscene/__init__.py", pattern = '^__version__ = "([^"]+)"' }
+source = { file = "package/OpenManager/openmanager/__init__.py", pattern = '^__version__ = "([^"]+)"' }
 places = [
     { file = "README.md", pattern = '^> Status: [^(\n]*\(v([^)\n]+)\)' },
 ]
@@ -31,11 +31,11 @@ run = ["python", "tools/check_ms.py"]
 name = "tests"
 run = ["python", "tests/run.py"]
 
-# The release package: dist/openscene-<version>-windows-x64-3dsmax.zip, with OpenScene.bundle at its root and
+# The release package: dist/openmanager-<version>-windows-x64-3dsmax.zip, with OpenManager.bundle at its root and
 # LICENSE inside it, and dist/SHA256SUMS.txt. The launcher installs it from there. tools/build.py makes the
 # bundle in dist/.
 [package]
-name = "OpenScene"
-bundle = "OpenScene.bundle"
+name = "OpenManager"
+bundle = "OpenManager.bundle"
 build = [["python", "tools/build.py"]]
-files = [{ from = "dist/OpenScene.bundle", to = "OpenScene.bundle" }]
+files = [{ from = "dist/OpenManager.bundle", to = "OpenManager.bundle" }]

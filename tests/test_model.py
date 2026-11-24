@@ -6,7 +6,7 @@ import json
 import unittest
 import zlib
 
-from openscene import external, model
+from openmanager import external, model
 
 
 def stored(setups, **extra):
@@ -41,12 +41,12 @@ class Storing(unittest.TestCase):
 
 
 class Refusing(unittest.TestCase):
-    """A .max file can come from anyone: what it holds is checked, and what OpenScene cannot take is left alone."""
+    """A .max file can come from anyone: what it holds is checked, and what OpenManager cannot take is left alone."""
 
     def test_a_newer_format_is_refused_not_guessed(self):
         back = model.decode(stored([model.empty_setup(1)]).replace('"version": 1', '"version": 9'))
         self.assertEqual(back["setups"], [])
-        self.assertIn("newer OpenScene", back["problem"])
+        self.assertIn("newer OpenManager", back["problem"])
 
     def test_a_format_version_that_is_not_a_number_is_refused(self):
         back = model.decode(json.dumps({"version": "1", "setups": []}))
@@ -137,7 +137,7 @@ class PresetFiles(unittest.TestCase):
     def test_a_newer_or_broken_preset_is_refused_and_said(self):
         with self.assertRaisesRegex(ValueError, "newer"):
             model.read_preset(json.dumps({"version": 7, "setups": []}))
-        with self.assertRaisesRegex(ValueError, "not an OpenScene preset"):
+        with self.assertRaisesRegex(ValueError, "not an OpenManager preset"):
             model.read_preset("{nope")
         with self.assertRaisesRegex(ValueError, "no setups"):
             model.read_preset(json.dumps({"setups": "x"}))
