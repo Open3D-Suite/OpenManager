@@ -98,7 +98,7 @@ Known limits are in [docs/audit.md](docs/audit.md). Post-Production / VFB works 
 
 ## License
 
-Copyright (C) 2026 Daniel Castellanos and OpenManager contributors.
+Copyright (C) 2026 Carles Llavata, Daniel Castellanos and OpenManager contributors.
 
 OpenManager is free software under the GNU General Public License, version 3 or later (`GPL-3.0-or-later`). See
 [`LICENSE`](LICENSE). OpenScene up to 2.2.2 was published under the MIT licence; copies of those versions keep it.

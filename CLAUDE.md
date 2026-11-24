@@ -21,10 +21,10 @@ Update it in the same commit as a change that makes it old.
 - **Commits.** Small, one step each, with one English sentence in the imperative. A format commit carries no code
   change. A change a user can notice gets its entry in `CHANGELOG.md`, under `## In development`, in the same commit.
   Commit as the repository's author (`git log -1 --format='%an <%ae>'`).
-- **Pull requests.** Changes reach `main` through pull requests: work on a branch, the CI passes, someone reviews it,
-  then it is merged.
+- **Pull requests.** Changes reach `main` through pull requests: work on a branch, the CI passes, then it is
+  merged. The author merges their own; a change from someone else waits for the author's review.
 - **Nothing goes out without the author's explicit OK:** no push, no tag, no release. A release stays a draft on
-  GitHub, and Open3D's maintainer publishes it. Tags are annotated, `vX.Y.Z`, and pushed one at a time, never with
+  GitHub until the author publishes it, once `tools\check.ps1 -Full` and the real test as a user passed. Tags are annotated, `vX.Y.Z`, and pushed one at a time, never with
   `--tags`. Never rewrite published history.
 - **Nothing is deleted without asking the author first,** each time.
 - **After a change** the plug-in must pass `tools\check.ps1` and load in 3ds Max.
