@@ -15,7 +15,7 @@ from . import external, model
 MAX_ERRORS = (RuntimeError, AttributeError, TypeError, ValueError)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CORE = os.path.join(os.path.dirname(HERE), "openscene_core.ms")
+CORE = os.path.join(os.path.dirname(HERE), "openmanager_core.ms")
 DATA_KEY = "OpenScene_Dat"
 
 
@@ -235,11 +235,11 @@ def new_operator(cls):
     """A new Corona colour-mapping operator of this class, or None: the class name comes from a setup, so it must be
     an operator's plain name, and it is looked up among 3ds Max's classes, never run as code."""
     if not model.is_tone_operator(cls):
-        print("OpenScene: refused a tone-mapping operator of class %r (not an operator's name)" % (cls,))
+        print("OpenManager: refused a tone-mapping operator of class %r (not an operator's name)" % (cls,))
         return None
     c = getattr(rt, cls, None)
     if c is None or not rt.isKindOf(c, rt.MAXClass) or str(rt.classOf(c)) != "ReferenceTarget":
-        print("OpenScene: this 3ds Max has no tone-mapping operator %s" % cls)
+        print("OpenManager: this 3ds Max has no tone-mapping operator %s" % cls)
         return None
     return c()
 
@@ -248,7 +248,7 @@ def set_operator_props(op, cls, props):
     """The values a setup stores for an operator: plain names and plain values only, never the link to the next one."""
     for n, v in (props or {}).items():
         if not model.is_plain_name(n) or n.endswith("_nextOperator"):
-            print("OpenScene: refused the setting %r of a %s" % (n, cls))
+            print("OpenManager: refused the setting %r of a %s" % (n, cls))
             continue
         if isinstance(v, dict) and "$color" in v:
             try:
@@ -260,7 +260,7 @@ def set_operator_props(op, cls, props):
         try:
             rt.setProperty(op, n, v)
         except Exception as ex:  # noqa: BLE001 - one setting 3ds Max refuses must not stop the others; said here
-            print("OpenScene: %s.%s -> %s" % (cls, n, ex))
+            print("OpenManager: %s.%s -> %s" % (cls, n, ex))
 
 
 def write_pipeline(obj, prop, chain):
@@ -374,14 +374,14 @@ def apply_lightmix(arrays):
     for name, vals in arrays.items():
         if name not in model.LIGHTMIX_ARRAYS or not isinstance(vals, list):
             if name != "colormap_lightselect_elementNames":
-                print("OpenScene: refused the LightMix setting %r" % (name,))
+                print("OpenManager: refused the LightMix setting %r" % (name,))
             continue
         if name == "colorMap_lightmixColors":
             vals = [rt.Color(*c) for c in vals]
         try:
             rt.setProperty(r, name, vals)
         except MAX_ERRORS as ex:
-            print("OpenScene: %s -> %s" % (name, ex))
+            print("OpenManager: %s -> %s" % (name, ex))
 
 
 # ---------------------------------------------------------------- what a setup does
@@ -638,7 +638,7 @@ def run(acts, redraw=True):
             try:
                 _run_one(a)
             except Exception as ex:  # noqa: BLE001 - one bad setting must not stop the rest; it is printed in the Listener
-                print("OpenScene: %s -> %s" % (str(a)[:160], ex))
+                print("OpenManager: %s -> %s" % (str(a)[:160], ex))
     if dialog_open:
         try:
             rt.renderSceneDialog.update()
@@ -811,7 +811,7 @@ def _same_scripts(a, b):
 
 
 def load_preset(path):
-    """The one place where OpenScene loads a render preset. A preset brings render settings only: Render Setup's own
+    """The one place where OpenManager loads a render preset. A preset brings render settings only: Render Setup's own
     pre- and post-render scripts, which a .rps file keeps too, are read before the load and put back after it,
     whatever the preset holds and also when the load fails."""
     kept = list(rt.oscn_renderSetupScripts())
@@ -821,7 +821,7 @@ def load_preset(path):
         rt.oscn_setRenderSetupScripts(kept)
         if not _same_scripts(list(rt.oscn_renderSetupScripts()), kept):
             print(
-                "OpenScene: Render Setup's scripts could not be put back after loading %s: check Render Setup > "
+                "OpenManager: Render Setup's scripts could not be put back after loading %s: check Render Setup > "
                 "Common > Scripts before rendering" % path
             )
 
@@ -904,7 +904,7 @@ def selected_layers():
 
 
 def new_camera():
-    with pymxs.undo(True, "OpenScene new camera"):
+    with pymxs.undo(True, "OpenManager new camera"):
         return int(rt.oscn_newCamera())
 
 

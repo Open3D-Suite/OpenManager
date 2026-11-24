@@ -3,8 +3,8 @@
 
 A setup lives inside a .max file, and a .max file can come from anyone. What a setup can run (the MAXScript of the
 Script Editor card, the files of the Script File card, the render preset of the Render Preset card) runs only once
-this computer trusts it: it was written or chosen in this computer's own OpenScene window, or the person said yes
-when OpenScene showed it. Trust is kept as a digest of the exact text (and, for a file, of its path and its
+this computer trusts it: it was written or chosen in this computer's own OpenManager window, or the person said yes
+when OpenManager showed it. Trust is kept as a digest of the exact text (and, for a file, of its path and its
 contents), so a script changed afterwards, here or by someone else, is asked about again.
 
 No pymxs and no Qt: the tests load this module as it is.
@@ -140,7 +140,7 @@ def question(pending):
         lines.append("• ...and %d more" % (len(pending) - 12))
     presets = any(it.title == "Render preset" for it in pending)
     return (
-        "The setups of this file run scripts or render presets that were not written or chosen in OpenScene on this "
+        "The setups of this file run scripts or render presets that were not written or chosen in OpenManager on this "
         "computer:\n\n%s\n\nA script can do anything 3ds Max can do. Run them only if you trust where this file comes "
         "from.%s\n\nRun them?"
         % (

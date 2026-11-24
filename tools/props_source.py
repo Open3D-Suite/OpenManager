@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""OpenScene's own list of the settings each card can show (the Property Selector), per engine.
+"""OpenManager's own list of the settings each card can show (the Property Selector), per engine.
 
 The property names are the ones each renderer / 3ds Max class exposes to MAXScript. Labels, ranges, defaults, order
-and which ones are ticked by default are OpenScene's own choices. tools/make_props.py turns this into props.json.
+and which ones are ticked by default are OpenManager's own choices. tools/make_props.py turns this into props.json.
 
 Helpers: B bool, F float, I integer, S string, FN file name, C colour, T texture map, M matrix, D date, MAT material,
 P pipeline. Arguments: name, short label (column / row), long label (Property Selector, tooltip), then for numbers

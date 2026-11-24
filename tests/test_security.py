@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Every place where OpenScene turns text into code, listed here: a new one makes this test fail until it is looked
+"""Every place where OpenManager turns text into code, listed here: a new one makes this test fail until it is looked
 at and added, with the reason it is safe. And the names a setup read from a file carries are checked before they
 reach 3ds Max (maxlink.actions, with a small stand-in for pymxs)."""
 
@@ -23,10 +23,10 @@ DOOR = re.compile(
 
 # file -> (how many doors, why each is safe)
 KNOWN = {
-    "bundle/openscene_bundle.ms": (2, "python.Execute of the bundle's own folder; fileIn of its own start-up script"),
-    "package/OpenScene.mcr": (1, "python.Execute of the bundle's own folder (oscn_home), set by the bundle"),
-    "package/OpenScene/openscene/maxlink.py": (1, "fileIn of openscene_core.ms, next to the package"),
-    "package/OpenScene/openscene_core.ms": (
+    "bundle/openmanager_bundle.ms": (2, "python.Execute of the bundle's own folder; fileIn of its own start-up script"),
+    "package/OpenManager.mcr": (1, "python.Execute of the bundle's own folder (oscn_home), set by the bundle"),
+    "package/OpenManager/openmanager/maxlink.py": (1, "fileIn of openmanager_core.ms, next to the package"),
+    "package/OpenManager/openmanager_core.ms": (
         4,
         "oscn_runCode, oscn_preRender / oscn_postRender (fileIn of the script files) and oscn_loadPreset: they run "
         "only what window.review() lets through, which a person wrote or chose on this computer, or said yes to",
@@ -70,7 +70,7 @@ class Doors(unittest.TestCase):
         )
 
     def test_no_class_name_is_run_as_code(self):
-        core = "\n".join(code_lines("package/OpenScene/openscene_core.ms"))
+        core = "\n".join(code_lines("package/OpenManager/openmanager_core.ms"))
         self.assertEqual(re.findall(r"execute\s+(\w+)", core), ["code"])
         self.assertIn("fn oscn_classNamed", core)
 
@@ -78,7 +78,7 @@ class Doors(unittest.TestCase):
 def load_maxlink():
     """maxlink with a stand-in for pymxs: enough to build the list of changes of a setup."""
     stand_in.install()
-    from openscene import maxlink
+    from openmanager import maxlink
 
     return maxlink
 
@@ -86,7 +86,7 @@ def load_maxlink():
 class FileNames(unittest.TestCase):
     def setUp(self):
         self.maxlink = load_maxlink()
-        from openscene import model
+        from openmanager import model
 
         self.model = model
 

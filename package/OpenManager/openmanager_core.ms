@@ -1,5 +1,5 @@
 ﻿-- SPDX-License-Identifier: GPL-3.0-or-later
--- OpenScene
+-- OpenManager
 -- MaxScript side of the tool: reads the scene and changes it for the Python window.
 -- Every function is prefixed oscn_ so nothing collides with other scripts.
 
@@ -455,7 +455,7 @@ fn oscn_scene objHandles:#() =
 -- ---------------------------------------------------------------- lasting IDs of the nodes and layers setups use
 
 -- A merge gives nodes new handles and a rename changes names: every node and layer a setup uses gets an ID of its
--- own in its app data, which travels with it (save, merge, rename). The slot is OpenScene's own ("OSID"), so another
+-- own in its app data, which travels with it (save, merge, rename). The slot is OpenManager's own ("OSID"), so another
 -- tool's IDs are never read as these.
 global oscn_uidSlot = 1330858308
 
@@ -597,7 +597,7 @@ fn oscn_set obj prop val =
         local parts = filterString (oscn_cleanProp prop) "."
         local same = false
         try (same = ((oscn_getPath obj parts 1) == val)) catch()
-        if (not same) do (try (oscn_setPath obj parts 1 val) catch (format "OpenScene: % . % -> %\n" obj prop (getCurrentException())))
+        if (not same) do (try (oscn_setPath obj parts 1 val) catch (format "OpenManager: % . % -> %\n" obj prop (getCurrentException())))
     )
     true
 )
@@ -830,7 +830,7 @@ fn oscn_hdriPreview src dst w h =
             ok = doesFileExist dst
         )
     )
-    catch (format "OpenScene: preview of % -> %\n" src (getCurrentException()))
+    catch (format "OpenManager: preview of % -> %\n" src (getCurrentException()))
     try (if (t != undefined) do close t) catch()
     try (if (b != undefined) do close b) catch()
     ok
@@ -1043,7 +1043,7 @@ fn oscn_newCamera =
     catch()
     if (cam == undefined) do cam = Physical()
     try (cam.transform = (inverse (getViewTM()))) catch()
-    try (cam.name = uniqueName "OpenScene_Camera") catch()
+    try (cam.name = uniqueName "OpenManager_Camera") catch()
     viewport.setCamera cam
     cam.inode.handle
 )
@@ -1221,7 +1221,7 @@ fn oscn_runCode code =
 (
     if (code != undefined and code != "") do
     (
-        try (execute code) catch (format "OpenScene script: %\n" (getCurrentException()))
+        try (execute code) catch (format "OpenManager script: %\n" (getCurrentException()))
     )
     true
 )
@@ -1232,12 +1232,12 @@ global oscn_preRenderCode = ""
 global oscn_postRenderCode = ""
 fn oscn_preRender =
 (
-    if (oscn_preRenderFile != "" and doesFileExist oscn_preRenderFile) do (try (fileIn oscn_preRenderFile) catch (format "OpenScene pre-render script: %\n" (getCurrentException())))
+    if (oscn_preRenderFile != "" and doesFileExist oscn_preRenderFile) do (try (fileIn oscn_preRenderFile) catch (format "OpenManager pre-render script: %\n" (getCurrentException())))
     oscn_runCode oscn_preRenderCode
 )
 fn oscn_postRender =
 (
-    if (oscn_postRenderFile != "" and doesFileExist oscn_postRenderFile) do (try (fileIn oscn_postRenderFile) catch (format "OpenScene post-render script: %\n" (getCurrentException())))
+    if (oscn_postRenderFile != "" and doesFileExist oscn_postRenderFile) do (try (fileIn oscn_postRenderFile) catch (format "OpenManager post-render script: %\n" (getCurrentException())))
     oscn_runCode oscn_postRenderCode
 )
 fn oscn_setRenderScripts preFile postFile preCode postCode =
@@ -1453,10 +1453,10 @@ fn oscn_fire what =
             if (not oscn_scenePending) do
             (
                 oscn_scenePending = true
-                try (oscn_notify what) catch (format "OpenScene: %\n" (getCurrentException()))
+                try (oscn_notify what) catch (format "OpenManager: %\n" (getCurrentException()))
             )
         )
-        else (try (oscn_notify what) catch (format "OpenScene: %\n" (getCurrentException())))
+        else (try (oscn_notify what) catch (format "OpenManager: %\n" (getCurrentException())))
     )
 )
 

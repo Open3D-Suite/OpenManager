@@ -12,14 +12,14 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 sys.dont_write_bytecode = True  # no __pycache__ beside the sources
-# The package lives in package/OpenScene, which tools/build.py puts in the bundle as it is.
-sys.path.insert(0, os.path.join(REPO, "package", "OpenScene"))
+# The package lives in package/OpenManager, which tools/build.py puts in the bundle as it is.
+sys.path.insert(0, os.path.join(REPO, "package", "OpenManager"))
 sys.path.insert(0, HERE)
 
 
 def main():
     # No test reads or writes the person's real folders: every Open3D folder is a scratch one.
-    with tempfile.TemporaryDirectory(prefix="openscene-tests-") as scratch:
+    with tempfile.TemporaryDirectory(prefix="openmanager-tests-") as scratch:
         os.environ["OPEN3D_SETTINGS_DIR"] = os.path.join(scratch, "settings")
         os.environ["OPEN3D_DATA_DIR"] = os.path.join(scratch, "data")
         suite = unittest.defaultTestLoader.discover(HERE, pattern="test_*.py", top_level_dir=HERE)

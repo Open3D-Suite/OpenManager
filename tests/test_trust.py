@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 
-from openscene import trust
+from openmanager import trust
 
 
 class Trust(unittest.TestCase):

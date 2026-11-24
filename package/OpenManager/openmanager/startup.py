@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""What runs when 3ds Max starts, from the bundle's start-up script (openscene_bundle.ms): the settings of the 2.x
+"""What runs when 3ds Max starts, from the bundle's start-up script (openmanager_bundle.ms): the settings of the 2.x
 versions are carried over, the copy that the old .mzp installer put in the user's scripts folders is removed (its
 settings stay), the toolbar is placed the first time, and one line in the MAXScript Listener says what was done.
 It must work without an interface too (3dsmaxbatch, render nodes): no Qt here.
@@ -76,4 +76,4 @@ def run():
             lines.append(placed)
     except Exception as error:  # noqa: BLE001 - the button can still be placed by hand; said in the Listener
         lines.append("toolbar not placed: %s" % error)
-    print("OpenScene %s: %s" % (__version__, "; ".join(lines) if lines else "ready"))
+    print("OpenManager %s: %s" % (__version__, "; ".join(lines) if lines else "ready"))

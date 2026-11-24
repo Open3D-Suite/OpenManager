@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Where OpenScene keeps its files, from what every Open3D app shares (open3d_settings).
+"""Where OpenManager keeps its files, from what every Open3D app shares (open3d_settings).
 
-Its settings go to %APPDATA%\\Open3D\\OpenScene, one set for every 3ds Max, and everything else it writes
+Its settings go to %APPDATA%\\Open3D\\OpenManager, one set for every 3ds Max, and everything else it writes
 (the HDRI previews, the toolbar's backup, the exports of a scene not saved yet) to
-%LOCALAPPDATA%\\Open3D\\OpenScene; OPEN3D_SETTINGS_DIR and OPEN3D_DATA_DIR move them. Nothing here creates
+%LOCALAPPDATA%\\Open3D\\OpenManager; OPEN3D_SETTINGS_DIR and OPEN3D_DATA_DIR move them. Nothing here creates
 them, except carry_over_plugcfg, once, with the settings of the 2.x versions.
 
 No pymxs and no Qt: the tests load this module as it is.
@@ -20,7 +20,7 @@ from . import APP, open3d_settings
 SETTINGS = "settings.json"  # the window: its cards, columns, theme and options
 DEFAULT_LAYOUT = "default_layout.json"  # the card layout saved with Settings > Save as default
 NOTIFY = "notify.txt"  # "0": don't offer to convert the setups of another scene manager
-TOOLBAR_DONE = "toolbar_placed.txt"  # the first start already put the OpenScene toolbar (or found the button)
+TOOLBAR_DONE = "toolbar_placed.txt"  # the first start already put the OpenManager toolbar (or found the button)
 HDRI_PREVIEWS = "hdri_previews"
 UNSAVED = "unsaved_scene"  # thumbnails, exports and presets of a scene that has no folder yet
 TOOLBAR_BACKUP = "interface_backup"
@@ -31,12 +31,12 @@ OLD_HDRI_PREVIEWS = "OpenScene_hdri"
 
 
 def settings_dir(environ=None):
-    """%APPDATA%\\Open3D\\OpenScene, or OpenScene in the folder OPEN3D_SETTINGS_DIR names; None without either."""
+    """%APPDATA%\\Open3D\\OpenManager, or OpenManager in the folder OPEN3D_SETTINGS_DIR names; None without either."""
     return open3d_settings.app_settings_dir(APP, environ)
 
 
 def data_dir(environ=None):
-    """%LOCALAPPDATA%\\Open3D\\OpenScene, or OpenScene in the folder OPEN3D_DATA_DIR names; None without either."""
+    """%LOCALAPPDATA%\\Open3D\\OpenManager, or OpenManager in the folder OPEN3D_DATA_DIR names; None without either."""
     return open3d_settings.app_data_dir(APP, environ)
 
 
@@ -81,7 +81,7 @@ def carry_over_plugcfg(plugcfg, environ=None):
     old = [(f, n) for f, n in OLD_FILES.items() if plugcfg and os.path.isfile(os.path.join(plugcfg, f))]
     if new_settings is not None and old and not os.path.lexists(new_settings):
         # carry_over copies a folder: the old files, under their new names, are put in one first
-        with tempfile.TemporaryDirectory(prefix="openscene-") as staging:
+        with tempfile.TemporaryDirectory(prefix="openmanager-") as staging:
             for was, now in old:
                 shutil.copy2(os.path.join(plugcfg, was), os.path.join(staging, now))
             done.append(("settings", open3d_settings.carry_over(staging, new_settings)))

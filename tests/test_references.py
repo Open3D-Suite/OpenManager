@@ -5,7 +5,7 @@ where the scene says the node is now."""
 import json
 import unittest
 
-from openscene import model
+from openmanager import model
 
 
 def setup_with_refs():

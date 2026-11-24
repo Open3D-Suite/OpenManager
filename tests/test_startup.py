@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ElementTree
 
-from openscene import startup, toolbar
+from openmanager import startup, toolbar
 
 # a made-up interface file, shaped like the ones 3ds Max writes (CRLF, windows inside CUIWindows)
 CUIX = (
@@ -28,7 +28,7 @@ class Toolbar(unittest.TestCase):
         new = toolbar.with_toolbar(CUIX)
         root = ElementTree.fromstring(new)  # noqa: S314 - a text made by this test
         names = [w.get("objectName") for w in root.iter("Window")]
-        self.assertEqual(names, ["Main Toolbar", "OpenScene"])
+        self.assertEqual(names, ["Main Toolbar", "OpenManager"])
         self.assertTrue(toolbar.has_button(new))
         self.assertNotIn("\n", new.replace("\r\n", ""))  # its line ends stay CRLF
 
@@ -38,7 +38,7 @@ class Toolbar(unittest.TestCase):
 
     def test_a_button_the_person_placed_already_is_seen(self):
         self.assertFalse(toolbar.has_button(CUIX))
-        self.assertTrue(toolbar.has_button(CUIX.replace("Other`Other", "OpenScene`OpenScene")))
+        self.assertTrue(toolbar.has_button(CUIX.replace("Other`Other", "OpenManager`OpenManager")))
 
     def test_a_file_without_a_list_of_windows_is_not_changed(self):
         self.assertIsNone(toolbar.with_toolbar("<CUIData></CUIData>"))

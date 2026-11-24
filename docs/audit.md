@@ -1,6 +1,6 @@
 # Audit
 
-How OpenScene holds up with big scenes, the limits it has, the improvements proposed (by impact), and what has to be
+How OpenManager holds up with big scenes, the limits it has, the improvements proposed (by impact), and what has to be
 tried in 3ds Max before a release. What touches MAXScript and the window can only be seen inside 3ds Max.
 
 ## Big scenes and Batch Render
@@ -83,9 +83,9 @@ tried in 3ds Max before a release. What touches MAXScript and the window can onl
 Before a release, on the package of the release, in a 3ds Max started for the test, with `OPEN3D_SETTINGS_DIR` and
 `OPEN3D_DATA_DIR` pointed at a scratch folder, on a new test scene:
 
-1. **The bundle**: unzip it into `ApplicationPlugins`, start 3ds Max. The Listener says `OpenScene 3.0.0: ...`, the
-   OpenScene macro opens the window, the icon shows in both themes.
-2. **The toolbar at the first start**: on an interface without the button, an "OpenScene" toolbar appears, floating;
+1. **The bundle**: unzip it into `ApplicationPlugins`, start 3ds Max. The Listener says `OpenManager 3.0.0: ...`, the
+   OpenManager macro opens the window, the icon shows in both themes.
+2. **The toolbar at the first start**: on an interface without the button, an "OpenManager" toolbar appears, floating;
    restart: no second one. On an interface that has the button already: nothing is added. The backup is in the data
    folder.
 3. **Settings of the earlier version**: with a `plugcfg\OpenScene.json` of 2.x, the first start copies it to the
@@ -95,7 +95,7 @@ Before a release, on the package of the release, in a 3ds Max started for the te
 5. **Scripts that come with a file**: a `.max` made on another computer with Script Editor code and a render preset:
    applying a setup asks first, Enter answers No and nothing runs; yes runs them and they are not asked again; after
    editing the code it is asked again. A batch asks once, before it starts.
-6. **A file saved by a newer OpenScene** (format version above 1): a message says why the setups were not read, and
+6. **A file saved by a newer OpenManager** (format version above 1): a message says why the setups were not read, and
    saving the scene leaves them as they were.
 7. **CXR**: Corona with render elements (LightMix, Z-depth...) and the `.cxr` Extension token: one `.cxr`, no separate
    files per element, that opens in the Corona Image Editor with every layer. With V-Ray: the path shows in orange and

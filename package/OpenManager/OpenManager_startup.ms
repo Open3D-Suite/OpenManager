@@ -1,6 +1,6 @@
 ﻿-- SPDX-License-Identifier: GPL-3.0-or-later
--- OpenScene: when a file with setups saved by another scene manager is opened and the window is closed, offer to
--- open it to convert them. (Settings > Notification turns this off.) Loaded by openscene_bundle.ms, which sets
+-- OpenManager: when a file with setups saved by another scene manager is opened and the window is closed, offer to
+-- open it to convert them. (Settings > Notification turns this off.) Loaded by openmanager_bundle.ms, which sets
 -- oscn_settingsDir.
 global oscn_isOpen, oscn_settingsDir
 global oscn_startupCheck
@@ -18,7 +18,7 @@ fn oscn_startupCheck =
                 if (f != undefined) do (wanted = ((readLine f) != "0"); close f)
             )
         )
-        -- Once the file has setups of OpenScene nothing is asked: they always win over the other ones, which are never
+        -- Once the file has setups of OpenManager nothing is asked: they always win over the other ones, which are never
         -- read again. (The other keys hold setups saved before 2.0.0, converted on the next save.)
         local ours = false
         for k in #(#OpenScene_Dat, #PuzlesSM_Dat, #DrawfieldSM_Dat) where (isProperty rootNode k) do
@@ -26,10 +26,10 @@ fn oscn_startupCheck =
         local other = (isProperty rootNode #SceneManager_Dat) and (((getProperty rootNode #SceneManager_Dat) as string).count > 25)
         if (wanted and other and not ours and oscn_isOpen != true and not (GetQuietMode()) and not (IsNetServer())) do
         (
-            if (queryBox "This file has setups saved by another scene manager.\nOpen OpenScene to convert them?" title:"OpenScene") do macros.run "OpenScene" "OpenScene"
+            if (queryBox "This file has setups saved by another scene manager.\nOpen OpenManager to convert them?" title:"OpenManager") do macros.run "OpenManager" "OpenManager"
         )
     )
-    catch (format "OpenScene: file-open check failed: %\n" (getCurrentException()))
+    catch (format "OpenManager: file-open check failed: %\n" (getCurrentException()))
 )
 callbacks.removeScripts id:#oscnStartup
 callbacks.addScript #filePostOpen "oscn_startupCheck()" id:#oscnStartup

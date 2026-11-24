@@ -1,30 +1,37 @@
 # Changelog
 
-What changed for users in each version of OpenScene, newest first.
+What changed for users in each version of OpenManager, newest first. Up to 2.2.2 it was called OpenScene; what
+OpenManager 0.x changed is in the CHANGELOG of OpenManager-Legacy.
 
 ## 3.0.0 — 2026-11-24
 
-Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed and updated by the Open3D launcher.
+**OpenScene is now OpenManager, and it replaces OpenManager 0.x.** The Open3D launcher offers it as the update of
+OpenManager. Everything you see is called OpenManager: the bundle (`OpenManager.bundle`), the toolbar, the action
+(*Category: OpenManager*), the window and the lines of the MAXScript Listener, and its folders are
+`%APPDATA%\Open3D\OpenManager` and `%LOCALAPPDATA%\Open3D\OpenManager`. Scenes made with OpenScene keep their
+setups, which stay where OpenScene saved them.
 
-- **Installed as a plug-in bundle**, `OpenScene.bundle` in `%APPDATA%\Autodesk\ApplicationPlugins`, by the launcher
+Version 3.0.0 also follows the rules of the Open3D suite, to be installed and updated by the Open3D launcher.
+
+- **Installed as a plug-in bundle**, `OpenManager.bundle` in `%APPDATA%\Autodesk\ApplicationPlugins`, by the launcher
   or by hand. The `.mzp` installer and the uninstaller are retired: the first start of the bundle removes the copy the
   `.mzp` installed (your settings stay).
-- The **OpenScene toolbar** is added at the first start, once, and only when no toolbar has the button yet. The
-  interface file is backed up first in OpenScene's data folder and put back if anything fails.
-- **Settings move** to `%APPDATA%\Open3D\OpenScene`, one set for every 3ds Max, and the HDRI previews to
-  `%LOCALAPPDATA%\Open3D\OpenScene`. The first start copies those of the earlier version from the `plugcfg` folder
+- The **OpenManager toolbar** is added at the first start, once, and only when no toolbar has the button yet. The
+  interface file is backed up first in OpenManager's data folder and put back if anything fails.
+- **Settings move** to `%APPDATA%\Open3D\OpenManager`, one set for every 3ds Max, and the HDRI previews to
+  `%LOCALAPPDATA%\Open3D\OpenManager`. The first start copies those of OpenScene 2.x from the `plugcfg` folder
   and leaves the old ones as they were.
 - **Scripts and render presets that come inside a file are asked about before they run**: the Script Editor, Script
-  File and Render Preset cards of a `.max` made on another computer. OpenScene shows what would run and asks, with No
-  as the answer Enter gives; a no holds until the window is closed. What you write or choose in OpenScene on this
+  File and Render Preset cards of a `.max` made on another computer. OpenManager shows what would run and asks, with No
+  as the answer Enter gives; a no holds until the window is closed. What you write or choose in OpenManager on this
   computer runs without asking, and so does what you said yes to, until it changes.
-- **A file can no longer make OpenScene run code through a name**: the class of an environment map or of a
+- **A file can no longer make OpenManager run code through a name**: the class of an environment map or of a
   tone-mapping operator stored in a setup is checked to be a plain name and looked up among 3ds Max's classes, never
   run. Render Override, Post-Production and LightMix settings take only plain property names and plain values.
-- **Setups saved by a newer OpenScene are refused, not guessed at**: they stay in the file as they are, and what you
-  change is not saved over them. So do setups that are damaged or bigger than OpenScene reads.
+- **Setups saved by a newer OpenManager are refused, not guessed at**: they stay in the file as they are, and what you
+  change is not saved over them. So do setups that are damaged or bigger than OpenManager reads.
 - **Setups keep their objects and layers through renames and merges.** Every camera, sun, dome, light, object and
-  layer a setup uses gets an ID of its own, stored with it in the scene when the setups are saved, so OpenScene finds
+  layer a setup uses gets an ID of its own, stored with it in the scene when the setups are saved, so OpenManager finds
   it again: a renamed layer stays in the Layers and Variants cards (before, it was lost), a renamed object keeps
   working, and nodes merged into another file, which get new handles there, are found by their ID, Lights card
   settings included. A handle that now belongs to another object is never used: an imported setup could otherwise
@@ -47,7 +54,7 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
     setup is listed in the MAXScript Listener: saved and where, skipped or failed, and why.
 - **A render preset no longer brings the scripts of Render Setup.** A `.rps` file also keeps Render Setup's pre- and
   post-render scripts (*Common > Scripts*), so a preset could set a script that runs at the next render. When
-  OpenScene loads a preset, those scripts are left as they were, also when the load fails.
+  OpenManager loads a preset, those scripts are left as they were, also when the load fails.
 - **Enter always answers No** in the question about scripts and presets, wherever the focus is; Yes takes a click or
   Space on its button.
 - **Bake Setups asks once, before it starts**, about the scripts and presets of the setups it applies, as Batch Render
@@ -59,9 +66,9 @@ Version 3.0.0: OpenScene follows the rules of the Open3D suite, to be installed 
   not a row is left out, and a repeated setup id gets a new one.
 - **Render Output takes only absolute paths** (a drive or a network share) without `..` and without characters
   Windows refuses: a relative path, or one that steps up, is shown in orange and the render is not saved there.
-- **Preset files (`.osp`, `.smp`) are read with the same checks**: one saved by a newer OpenScene, too big or broken is
+- **Preset files (`.osp`, `.smp`) are read with the same checks**: one saved by a newer OpenManager, too big or broken is
   refused and the reason is said; an output preset sets only the settings of the Render Output card.
-- The repository is now at `github.com/Open3D-Suite/OpenScene`, with the other apps of the suite.
+- The repository is now at `github.com/Open3D-Suite/OpenManager`, with the other apps of the suite.
 - The licence is now the GNU General Public License, version 3 or later. Versions up to 2.2.2 keep the MIT licence.
 - Settings are written whole into a new file that then takes the old one's place, so a crash never leaves them half
   written.

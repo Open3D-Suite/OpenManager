@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Builds dist/OpenScene.bundle, the Autodesk ApplicationPlugins bundle that the Open3D launcher installs (or that is
+"""Builds dist/OpenManager.bundle, the Autodesk ApplicationPlugins bundle that the Open3D launcher installs (or that is
 copied into %APPDATA%\\Autodesk\\ApplicationPlugins by hand): checks the MAXScript files, draws the icons, copies
-the package and writes PackageContents.xml with the version of openscene/__init__.py.
+the package and writes PackageContents.xml with the version of openmanager/__init__.py.
 
     python tools/build.py
 
@@ -20,12 +20,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PKG = os.path.join(ROOT, "package")
 BUNDLE_SRC = os.path.join(ROOT, "bundle")
 DIST = os.path.join(ROOT, "dist")
-ICON_NAME = "OpenScene"
+ICON_NAME = "OpenManager"
 SIZES = (16, 24, 30, 32, 36, 48)
 
-# The bundle's identity for 3ds Max: made once for OpenScene, never changed
-PRODUCT_CODE = "{1DE32304-98D8-46E2-B9E7-BBEDA0AE3FA9}"
-UPGRADE_CODE = "{017FED04-B7BD-4640-80CE-06ECEE03FE5C}"
+# The bundle's identity for 3ds Max: OpenManager's, the one its 0.x versions had too, never changed. Not the codes
+# OpenScene.bundle had: 3ds Max loads one bundle of a product, and a bundle of OpenScene still installed has to load
+# beside this one for once, so that this one can remove it (startup.py).
+PRODUCT_CODE = "{6A36A415-E9A4-4DC7-9B99-1FF6EDB2C661}"
+UPGRADE_CODE = "{757AF74F-AD01-4AEE-A3B6-43D92E4B9053}"
 SERIES_MIN = "2025"  # Python 3.11 and PySide6
 SERIES_MAX = "2099"  # 3ds Max 2027 ignores a bundle without SeriesMax: 2099 sets no limit
 
@@ -101,19 +103,19 @@ def build_icons(out):
 
 
 def read_version():
-    with open(os.path.join(PKG, "OpenScene", "openscene", "__init__.py"), encoding="utf-8") as f:
+    with open(os.path.join(PKG, "OpenManager", "openmanager", "__init__.py"), encoding="utf-8") as f:
         m = re.search(r'^__version__ = "([^"]+)"', f.read(), re.M)
     if not m:
-        raise SystemExit("openscene/__init__.py has no __version__")
+        raise SystemExit("openmanager/__init__.py has no __version__")
     return m.group(1)
 
 
 # The parts of the bundle, as 3ds Max reads them: the macro, the icon folders of each theme and the start-up script
 PARTS = (
-    ("macroscripts parts", "./Contents/macroscripts/OpenScene.mcr"),
+    ("macroscripts parts", "./Contents/macroscripts/OpenManager.mcr"),
     ("dark icon paths parts", "./Contents/icons/Dark"),
     ("light icon paths parts", "./Contents/icons/Light"),
-    ("post-start-up scripts parts", "./Contents/scripts/openscene_bundle.ms"),
+    ("post-start-up scripts parts", "./Contents/scripts/openmanager_bundle.ms"),
 )
 
 
@@ -125,7 +127,7 @@ def package_contents(version):
     parts = "".join(
         '    <Components Description="%s">\n'
         "        %s\n"
-        '        <ComponentEntry AppName="OpenScene" Version="%s" ModuleName="%s" />\n'
+        '        <ComponentEntry AppName="OpenManager" Version="%s" ModuleName="%s" />\n'
         "    </Components>\n" % (desc, req, version, module)
         for desc, module in PARTS
     )
@@ -136,12 +138,12 @@ def package_contents(version):
         '    SchemaVersion="1.0"\n'
         '    AutodeskProduct="3ds Max"\n'
         '    ProductType="Application"\n'
-        '    Name="OpenScene"\n'
+        '    Name="OpenManager"\n'
         '    Description="Scene setups and batch rendering for 3ds Max."\n'
         '    AppVersion="%s"\n'
         '    ProductCode="%s"\n'
         '    UpgradeCode="%s">\n'
-        '    <CompanyDetails Name="OpenScene contributors" />\n'
+        '    <CompanyDetails Name="OpenManager contributors" />\n'
         "    %s\n"
         "%s"
         "</ApplicationPackage>\n" % (version, PRODUCT_CODE, UPGRADE_CODE, req, parts)
@@ -164,21 +166,21 @@ def check_bundle(target, version):
         if not os.path.exists(os.path.join(target, entry.get("ModuleName"))):
             problems.append("%s is not in the bundle" % entry.get("ModuleName"))
     if problems:
-        raise SystemExit("OpenScene.bundle refused:\n  " + "\n  ".join(problems))
+        raise SystemExit("OpenManager.bundle refused:\n  " + "\n  ".join(problems))
 
 
 def build_bundle(version, dist=DIST):
-    target = os.path.join(dist, "OpenScene.bundle")
+    target = os.path.join(dist, "OpenManager.bundle")
     if os.path.isdir(target):
         shutil.rmtree(target)
     contents = os.path.join(target, "Contents")
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo")
-    shutil.copytree(os.path.join(PKG, "OpenScene"), os.path.join(contents, "OpenScene"), ignore=ignore)
+    shutil.copytree(os.path.join(PKG, "OpenManager"), os.path.join(contents, "OpenManager"), ignore=ignore)
     build_icons(os.path.join(contents, "icons"))
     os.makedirs(os.path.join(contents, "macroscripts"))
-    shutil.copy2(os.path.join(PKG, "OpenScene.mcr"), os.path.join(contents, "macroscripts"))
+    shutil.copy2(os.path.join(PKG, "OpenManager.mcr"), os.path.join(contents, "macroscripts"))
     os.makedirs(os.path.join(contents, "scripts"))
-    shutil.copy2(os.path.join(BUNDLE_SRC, "openscene_bundle.ms"), os.path.join(contents, "scripts"))
+    shutil.copy2(os.path.join(BUNDLE_SRC, "openmanager_bundle.ms"), os.path.join(contents, "scripts"))
     with open(os.path.join(target, "PackageContents.xml"), "w", encoding="utf-8", newline="\r\n") as f:
         f.write(package_contents(version))
     check_bundle(target, version)
