@@ -20,7 +20,6 @@ Update it in the same commit as a change that makes it old.
 - **Plan first.** Before a large change, show a plan and wait for the author's OK.
 - **Commits.** Small, one step each, with one English sentence in the imperative. A format commit carries no code
   change. A change a user can notice gets its entry in `CHANGELOG.md`, under `## In development`, in the same commit.
-  Commit as the repository's author (`git log -1 --format='%an <%ae>'`).
 - **Pull requests.** Changes reach `main` through pull requests: work on a branch, the CI passes, then it is
   merged. The author merges their own; a change from someone else waits for the author's review.
 - **Nothing goes out without the author's explicit OK:** no push, no tag, no release. A release stays a draft on
