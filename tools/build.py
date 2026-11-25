@@ -13,6 +13,7 @@ import re
 import shutil
 import struct
 import sys
+import tempfile
 import xml.etree.ElementTree as ElementTree
 import zlib
 
@@ -20,6 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PKG = os.path.join(ROOT, "package")
 BUNDLE_SRC = os.path.join(ROOT, "bundle")
 DIST = os.path.join(ROOT, "dist")
+OLD_BUNDLE = "old-OpenManager.bundle-"  # the folders in dist/ an old bundle is moved into before it is deleted
 ICON_NAME = "OpenManager"
 SIZES = (16, 24, 30, 32, 36, 48)
 
@@ -171,8 +173,16 @@ def check_bundle(target, version):
 
 def build_bundle(version, dist=DIST):
     target = os.path.join(dist, "OpenManager.bundle")
+    # Windows deletes a folder only once every handle on it is closed (a network drive, an antivirus or the indexer may
+    # still hold one): right after rmtree its name can still be taken, and making a folder inside it fails. So the old
+    # bundle is first moved aside, under a name of its own, and the new one never meets a folder still being deleted.
     if os.path.isdir(target):
-        shutil.rmtree(target)
+        os.rename(target, os.path.join(tempfile.mkdtemp(prefix=OLD_BUNDLE, dir=dist), "OpenManager.bundle"))
+    if os.path.isdir(dist):
+        for name in os.listdir(dist):
+            if name.startswith(OLD_BUNDLE):
+                # this build's old bundle and any an interrupted build left; one still in use goes another time
+                shutil.rmtree(os.path.join(dist, name), ignore_errors=True)
     contents = os.path.join(target, "Contents")
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo")
     shutil.copytree(os.path.join(PKG, "OpenManager"), os.path.join(contents, "OpenManager"), ignore=ignore)

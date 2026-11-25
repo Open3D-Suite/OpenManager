@@ -9,6 +9,7 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
+from unittest import mock
 
 import openmanager
 
@@ -104,6 +105,38 @@ class Bundle(unittest.TestCase):
         # a start-up script of OpenManager 0.x, left by its .mzp, adds one in the session its files are removed
         script = (self.bundle / "Contents" / "scripts" / "openmanager_bundle.ms").read_text(encoding="utf-8-sig")
         self.assertIn("callbacks.removeScripts id:#omgrStartup", script)
+
+
+def still_being_deleted(path, *args, **kwargs):
+    """shutil.rmtree as Windows does it while a handle on the folder is open (a network drive, an antivirus, the
+    indexer): it returns, and the folder and everything in it are still there."""
+
+
+class Rebuild(unittest.TestCase):
+    def setUp(self):
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.dist = Path(scratch.name)
+
+    def build(self):
+        return Path(build.build_bundle(build.read_version(), dist=str(self.dist)))
+
+    def test_it_builds_again_while_the_old_bundle_is_still_being_deleted(self):
+        # the third build also meets what the second could not delete yet
+        with mock.patch.object(build.shutil, "rmtree", still_being_deleted):
+            for _ in range(3):
+                bundle = self.build()
+        self.assertTrue((bundle / "Contents" / "icons" / "Dark" / "OpenManager_24.png").is_file())
+        self.assertTrue((bundle / "Contents" / "OpenManager" / "openmanager" / "window.py").is_file())
+        moved = [p for p in self.dist.iterdir() if p.name.startswith(build.OLD_BUNDLE)]
+        self.assertEqual(len(moved), 2)
+
+    def test_it_deletes_the_old_bundles_once_it_can(self):
+        left = self.dist / (build.OLD_BUNDLE + "interrupted") / "OpenManager.bundle" / "Contents"
+        left.mkdir(parents=True)
+        self.build()
+        self.build()
+        self.assertEqual([p.name for p in self.dist.iterdir()], ["OpenManager.bundle"])
 
 
 if __name__ == "__main__":
