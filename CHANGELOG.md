@@ -3,7 +3,7 @@
 What changed for users in each version of OpenManager, newest first. Up to 2.2.2 it was called OpenScene; what
 OpenManager 0.x changed is in the CHANGELOG of OpenManager-Legacy.
 
-## In development
+## 3.0.1 — 2026-11-26
 
 - **Fixed:** clicking OpenManager's toolbar button said *OpenManager is not installed* from the second start of
   3ds Max on, once the button was on a toolbar. The button now finds OpenManager however early 3ds Max asks it.

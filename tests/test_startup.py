@@ -11,6 +11,7 @@ from unittest import mock
 
 import stand_in  # noqa: E402 - tests/ is on the path (tests/run.py)
 
+import openmanager
 from openmanager import folders, startup, toolbar
 
 # a made-up interface file, shaped like the ones 3ds Max writes (CRLF, windows inside CUIWindows)
@@ -199,7 +200,7 @@ class StartUp(unittest.TestCase):
         printed = self.run_start()
         new = self.root / "settings" / "OpenManager"
         self.assertEqual((new / "settings.json").read_text(encoding="utf-8"), '{"theme": {"main": "dark"}}')
-        self.assertTrue(printed[0].startswith("OpenManager 3.0.0: "), printed)
+        self.assertTrue(printed[0].startswith(f"OpenManager {openmanager.__version__}: "), printed)
         self.assertIn(
             "OpenManager: settings of OpenScene 2.x: copied 1 files; the old ones are left as they were", printed
         )

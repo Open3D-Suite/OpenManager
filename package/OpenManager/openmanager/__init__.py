@@ -9,7 +9,7 @@ need them, never at module level.
 import sys
 import traceback
 
-__version__ = "3.0.0"
+__version__ = "3.0.1"
 # The app's name, as the Open3D launcher shows it and as its folders are called.
 APP = "OpenManager"
 
