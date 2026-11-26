@@ -83,12 +83,13 @@ tried in 3ds Max before a release. What touches MAXScript and the window can onl
 Before a release, on the package of the release, in a 3ds Max started for the test, with `OPEN3D_SETTINGS_DIR` and
 `OPEN3D_DATA_DIR` pointed at a scratch folder, on a new test scene:
 
-1. **The bundle**: unzip it into `ApplicationPlugins`, start 3ds Max. The Listener says `OpenManager 3.0.0: ...`, the
+1. **The bundle**: unzip it into `ApplicationPlugins`, start 3ds Max. The Listener says `OpenManager <version>: ...`, the
    OpenManager macro opens the window, the icon shows in both themes.
 2. **The toolbar at the first start**: on an interface without the button, an "OpenManager" toolbar appears, floating;
-   restart: no second one. On an interface that has the button already: nothing is added. The backup is in the data
-   folder. On an interface with the OpenScene toolbar (or an OpenScene button on a toolbar of one's own): the
-   button opens OpenManager and the toolbar is called OpenManager, with no second one.
+   restart: no second one, and its button still opens the window (in 3.0.0 it said "not installed" then). On an
+   interface that has the button already: nothing is added. The backup is in the data folder. On an interface with the
+   OpenScene toolbar (or an OpenScene button on a toolbar of one's own): the button opens OpenManager and the toolbar
+   is called OpenManager, with no second one.
 3. **Settings of the versions before**: with the files of OpenManager 0.x in the settings folder
    (`OpenManager.json` with trusted scripts, `OpenManager_default.json`, `OpenManager_notify.txt`, and
    `OpenManager_hdri` in the data folder), the first start converts them: the theme, the card layout and the
