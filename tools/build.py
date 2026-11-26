@@ -33,7 +33,12 @@ UPGRADE_CODE = "{757AF74F-AD01-4AEE-A3B6-43D92E4B9053}"
 SERIES_MIN = "2025"  # Python 3.11 and PySide6
 SERIES_MAX = "2099"  # 3ds Max 2027 ignores a bundle without SeriesMax: 2099 sets no limit
 
-# ---------------------------------------------------------------- icon: the puzzle piece, in greys
+# ---------------------------------------------------------------- icon: a stack of three setup cards, in greys
+# The same shape as OpenManager's icon in the Open3D launcher, and as the logo of the window (icons.logo_path).
+# Each card (x0, y0, x1, y1) in unit coordinates, the front one first; a card behind shows past a gap.
+CARDS = ((0.08, 0.38, 0.68, 0.92), (0.20, 0.23, 0.80, 0.77), (0.32, 0.08, 0.92, 0.62))
+CARD_RADIUS = 0.08
+CARD_GAP = 0.055
 
 
 def _in_round_rect(x, y, x0, y0, x1, y1, r):
@@ -44,18 +49,16 @@ def _in_round_rect(x, y, x0, y0, x1, y1, r):
     return (x - cx) ** 2 + (y - cy) ** 2 <= r * r
 
 
-def _in_circle(x, y, cx, cy, r):
-    return (x - cx) ** 2 + (y - cy) ** 2 <= r * r
+def _in_card(x, y, card, grow=0.0):
+    x0, y0, x1, y1 = card
+    return _in_round_rect(x, y, x0 - grow, y0 - grow, x1 + grow, y1 + grow, CARD_RADIUS + grow)
 
 
-def _in_puzzle(x, y):
-    """Unit coordinates (0..1). Square body, knobs on top and right, sockets on left and bottom; fills the icon."""
-    x = (x - 0.5) / 1.35 + 0.535
-    y = (y - 0.5) / 1.35 + 0.445
-    body = _in_round_rect(x, y, 0.20, 0.30, 0.68, 0.78, 0.05)
-    knob = _in_circle(x, y, 0.44, 0.215, 0.105) or _in_circle(x, y, 0.765, 0.54, 0.105)
-    hole = _in_circle(x, y, 0.20, 0.54, 0.085) or _in_circle(x, y, 0.44, 0.78, 0.085)
-    return (body or knob) and not hole
+def _in_cards(x, y):
+    """Unit coordinates (0..1): the front card whole, and each card behind it only where it shows past the gap."""
+    if _in_card(x, y, CARDS[0]):
+        return True
+    return any(_in_card(x, y, CARDS[i]) and not _in_card(x, y, CARDS[i - 1], CARD_GAP) for i in (1, 2))
 
 
 # 3ds Max picks the icon set of its theme: silver on the dark interface, graphite on the light one
@@ -71,7 +74,7 @@ def draw_icon(size, theme="Dark", ss=6):
             cov = 0
             for sj in range(ss):
                 for si in range(ss):
-                    if _in_puzzle((i + (si + 0.5) / ss) / size, (j + (sj + 0.5) / ss) / size):
+                    if _in_cards((i + (si + 0.5) / ss) / size, (j + (sj + 0.5) / ss) / size):
                         cov += 1
             t = min(1.0, max(0.0, (i + j) / (2.0 * size)))
             rgb = tuple(int(round(c0[k] + (c1[k] - c0[k]) * t)) for k in range(3))
