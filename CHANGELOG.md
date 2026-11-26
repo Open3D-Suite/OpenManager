@@ -5,6 +5,8 @@ OpenManager 0.x changed is in the CHANGELOG of OpenManager-Legacy.
 
 ## In development
 
+- **Fixed:** clicking OpenManager's toolbar button said *OpenManager is not installed* from the second start of
+  3ds Max on, once the button was on a toolbar. The button now finds OpenManager however early 3ds Max asks it.
 - The icon in 3ds Max (the toolbar button and the logo of the window) is now OpenManager's icon in the Open3D
   launcher, a stack of three cards, instead of the puzzle piece.
 
