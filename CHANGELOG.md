@@ -3,6 +3,11 @@
 What changed for users in each version of OpenManager, newest first. Up to 2.2.2 it was called OpenScene; what
 OpenManager 0.x changed is in the CHANGELOG of OpenManager-Legacy.
 
+## In development
+
+- The icon in 3ds Max (the toolbar button and the logo of the window) is now OpenManager's icon in the Open3D
+  launcher, a stack of three cards, instead of the puzzle piece.
+
 ## 3.0.0 — 2026-11-24
 
 **OpenScene is now OpenManager, and it replaces OpenManager 0.x.** The Open3D launcher offers it as the update of

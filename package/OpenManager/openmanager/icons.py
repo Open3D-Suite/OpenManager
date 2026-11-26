@@ -187,33 +187,32 @@ def teapot(color, filled=True, size=18):
     return icon
 
 
-def puzzle_path(r):
-    """Puzzle piece filling rect r: a square body, knobs on top and right, sockets on left and bottom."""
-    k = 1.35  # the piece spans 0.67 of the drawing below
-    x, y, w, h = r.x(), r.y(), r.width() * k, r.height() * k
-    ox, oy = r.width() * 0.5 - w * 0.535, r.height() * 0.5 - h * 0.445
+# A stack of three setup cards (x0, y0, x1, y1), the front one first: OpenManager's icon in the Open3D launcher,
+# the same shape as the toolbar icons tools/build.py draws (CARDS there)
+CARDS = ((0.08, 0.38, 0.68, 0.92), (0.20, 0.23, 0.80, 0.77), (0.32, 0.08, 0.92, 0.62))
+CARD_RADIUS, CARD_GAP = 0.08, 0.055
 
-    def u(fx, fy):
-        return QtCore.QPointF(x + ox + w * fx, y + oy + h * fy)
 
-    body = QtGui.QPainterPath()
-    body.addRoundedRect(QtCore.QRectF(u(0.20, 0.30), u(0.68, 0.78)), w * 0.05, h * 0.05)
-    knob = QtGui.QPainterPath()
-    knob.addEllipse(u(0.44, 0.215), w * 0.105, h * 0.105)
-    body = body.united(knob)
-    knob = QtGui.QPainterPath()
-    knob.addEllipse(u(0.765, 0.54), w * 0.105, h * 0.105)
-    body = body.united(knob)
-    hole = QtGui.QPainterPath()
-    hole.addEllipse(u(0.20, 0.54), w * 0.085, h * 0.085)
-    body = body.subtracted(hole)
-    hole = QtGui.QPainterPath()
-    hole.addEllipse(u(0.44, 0.78), w * 0.085, h * 0.085)
-    return body.subtracted(hole)
+def logo_path(r):
+    """The logo inside rect r: the front card whole, and each card behind it only where it shows past a gap."""
+    x, y, w, h = r.x(), r.y(), r.width(), r.height()
+
+    def card(c, grow=0.0):
+        p = QtGui.QPainterPath()
+        rect = QtCore.QRectF(
+            x + w * (c[0] - grow), y + h * (c[1] - grow), w * (c[2] - c[0] + 2 * grow), h * (c[3] - c[1] + 2 * grow)
+        )
+        p.addRoundedRect(rect, w * (CARD_RADIUS + grow), h * (CARD_RADIUS + grow))
+        return p
+
+    path = card(CARDS[0])
+    for i in (1, 2):
+        path = path.united(card(CARDS[i]).subtracted(card(CARDS[i - 1], CARD_GAP)))
+    return path
 
 
 def app_icon(dark=True):
-    """The logo: just the puzzle piece in greys. Silver on dark interfaces, graphite on light ones."""
+    """The logo: a stack of setup cards in greys, as in the launcher. Silver on dark interfaces, graphite on light."""
     key = ("app", bool(dark))
     if key in _CACHE:
         return _CACHE[key]
@@ -227,7 +226,7 @@ def app_icon(dark=True):
         g = QtGui.QLinearGradient(0, 0, size, size)
         g.setColorAt(0, QtGui.QColor(a))
         g.setColorAt(1, QtGui.QColor(b))
-        p.fillPath(puzzle_path(QtCore.QRectF(0, 0, size, size)), QtGui.QBrush(g))
+        p.fillPath(logo_path(QtCore.QRectF(0, 0, size, size)), QtGui.QBrush(g))
         p.end()
         icon.addPixmap(pm)
     _CACHE[key] = icon

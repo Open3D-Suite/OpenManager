@@ -53,6 +53,9 @@ Update it in the same commit as a change that makes it old.
 - `python tools/build.py` writes `dist/OpenManager.bundle`: it runs `tools/check_ms.py` (stops on a problem), copies
   `package/OpenManager` to `Contents/OpenManager`, the macro to `Contents/macroscripts`, draws the icons into
   `Contents/icons/Dark|Light`, and writes `PackageContents.xml` from `__version__`, then checks it.
+- The app's icon is OpenManager's icon in the Open3D launcher, a stack of three cards: `CARDS` in `tools/build.py`
+  (the toolbar icons) and in `openmanager/icons.py` (`logo_path`, the window's logo) hold the same shape; change
+  both together.
 - `tools\check.ps1` runs every check, and all must pass; it needs Python 3.11 or newer and the ruff that `ruff.toml`
   names. Built in: the version agrees, every `.py`, `.ms`, `.mcr` and `.ps1` has its licence line, no file holds a
   path of somebody's computer. Then, from `tools/repo.toml`: `ruff format --check .`, `ruff check .`,
