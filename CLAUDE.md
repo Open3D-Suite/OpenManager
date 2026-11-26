@@ -137,6 +137,11 @@ Update it in the same commit as a change that makes it old.
   escapes) with the Write / Edit tools, never through a shell heredoc.
 - A `.ms` file that uses a global made by a file it loads declares it `global` before its block, or the name
   compiles as an empty local.
+- The macro (`OpenManager.mcr`) reads `oscn_bundleHome` and `oscn_isOpen` only through `globalVars.get #name`,
+  never by plain name: a toolbar button asks `isChecked` while 3ds Max builds its interface, before the bundle's
+  start-up script makes those globals (a `global` line at the top of the `.mcr` does not help there), and a
+  name a macro meets before it is a global stays its local for the whole session. That made every OpenManager
+  button say "not installed" in 3.0.0. `test_bundle` checks it.
 - MAXScript has no call to add a button to a toolbar: `toolbar.py` edits the `.cuix` (UTF-8 with a byte order mark,
   CRLF; keep both) after `cui.saveConfig`, then `cui.loadConfig`.
 - 3ds Max loads usermacros before the bundles' macroscripts: the bundle's OpenManager macro wins over an old `.mzp`

@@ -74,9 +74,20 @@ class Bundle(unittest.TestCase):
 
     def test_a_path_with_an_apostrophe_starts_too(self):
         # the folder goes into a line of Python: between double quotes, which a Windows path cannot hold
-        for part in ("scripts/openmanager_bundle.ms", "macroscripts/OpenManager.mcr"):
+        parts = {"scripts/openmanager_bundle.ms": "oscn_bundleHome", "macroscripts/OpenManager.mcr": "home"}
+        for part, folder in parts.items():
             script = (self.bundle / "Contents" / part).read_text(encoding="utf-8-sig")
-            self.assertIn('d = r\\"" + oscn_bundleHome + "\\"', script)
+            self.assertIn(f'd = r\\"" + {folder} + "\\"', script)
+
+    def test_the_macro_reads_the_globals_when_it_runs(self):
+        # a toolbar button asks isChecked while 3ds Max builds its interface, before the start-up script makes the
+        # globals: a plain name met then stays a local of the macro for the session, always undefined, and the button
+        # says OpenManager is not installed. So the macro names them only as #names, through globalVars.
+        text = (self.bundle / "Contents" / "macroscripts" / "OpenManager.mcr").read_text(encoding="utf-8-sig")
+        code = "\n".join(line.split("--")[0] for line in text.splitlines())
+        for name in ("oscn_bundleHome", "oscn_isOpen"):
+            self.assertIn("globalVars.get #" + name, code)
+            self.assertEqual(code.count(name), code.count("#" + name), name + " is read by its plain name")
 
     def test_no_compiled_python_goes_in(self):
         found = [p for p in self.bundle.rglob("*") if p.name == "__pycache__" or p.suffix in (".pyc", ".pyo")]
