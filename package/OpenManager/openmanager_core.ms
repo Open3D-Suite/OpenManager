@@ -1448,6 +1448,16 @@ fn oscn_selectedLayers =
 -- burst goes to Python, the others wait until Python has read the scene again (it calls oscn_sceneRead)
 global oscn_scenePending = false
 fn oscn_sceneRead = (oscn_scenePending = false; true)
+
+-- true while an object is being created in a viewport (a line, a rectangle, a tape...) or a mouse button is held: the
+-- object being drawn is half built, and a right-click deletes it, so reading the scene then can crash 3ds Max
+fn oscn_busy =
+(
+    local busy = false
+    try (busy = isCreatingObject()) catch()
+    if (not busy) do (try (busy = not (mouse.buttonStates).isEmpty) catch())
+    busy
+)
 fn oscn_fire what =
 (
     if (oscn_notify != undefined) do

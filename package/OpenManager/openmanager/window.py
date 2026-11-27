@@ -391,7 +391,7 @@ class SceneManager(QtWidgets.QDockWidget):
         self.apply_timer = self._timer(120, self._apply)
         self.save_timer = self._timer(700, self.save_setups)
         self.list_timer = self._timer(0, self.refresh_rows)
-        self.scene_timer = self._timer(350, self.reload_scene)
+        self.scene_timer = self._timer(350, self._scene_changed)
         self.sync_timer = QtCore.QTimer(self)
         self.sync_timer.setInterval(400)
         self.sync_timer.timeout.connect(self._camera_sync_tick)
@@ -835,10 +835,17 @@ class SceneManager(QtWidgets.QDockWidget):
         self.refresh_cards()
         self.update_status()
 
+    def _scene_changed(self):
+        """A scene event: read the scene, or wait while an object is being created (a read then can crash 3ds Max)."""
+        if maxlink.busy():
+            self.scene_timer.start()
+            return
+        self.reload_scene()
+
     def sync_scene(self, force=False):
         """Reads the scene again when it changed in 3ds Max in a way no event tells (a map made in the Material Editor,
         the sun type of a Daylight...). Cheap: one call, and nothing is redrawn when the scene is the same."""
-        if self.rendering or self.loading or self.applying:
+        if self.rendering or self.loading or self.applying or maxlink.busy():
             return False
         now = time.time()
         # a scene that takes long to read is read less often (a heavy scene took that time each time the mouse came in)
@@ -1244,7 +1251,7 @@ class SceneManager(QtWidgets.QDockWidget):
 
     def _camera_sync_tick(self):
         s = self.active()
-        if s is None or self.rendering or not self.camera_sync:
+        if s is None or self.rendering or not self.camera_sync or maxlink.busy():
             return
         h = maxlink.viewport_camera()
         if h is None or h == s["camera"].get("handle"):
