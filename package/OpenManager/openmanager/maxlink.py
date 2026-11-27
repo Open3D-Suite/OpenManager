@@ -113,6 +113,15 @@ def read_scene_raw(handles=None):
     return str(rt.oscn_scene(objHandles=sorted(int(h) for h in (handles or []))))
 
 
+def busy():
+    """True while an object is being created in a viewport or a mouse button is held: the scene must not be read then
+    (the object being drawn is half built, and a right-click deletes it)."""
+    try:
+        return bool(rt.oscn_busy())
+    except MAX_ERRORS:
+        return False
+
+
 def parse_scene(raw):
     return json.loads(raw, strict=False)  # a stray control character in a name must not stop the read
 

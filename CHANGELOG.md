@@ -3,6 +3,12 @@
 What changed for users in each version of OpenManager, newest first. Up to 2.2.2 it was called OpenScene; what
 OpenManager 0.x changed is in the CHANGELOG of OpenManager-Legacy.
 
+## In development
+
+- **Fixed:** 3ds Max could stop with an *EXCEPTION_ACCESS_VIOLATION* when a line, a rectangle or a tape was
+  cancelled with a right-click while OpenManager was open: OpenManager no longer reads the scene while an object is
+  being created.
+
 ## 3.0.1 — 2026-11-26
 
 - **Fixed:** clicking OpenManager's toolbar button said *OpenManager is not installed* from the second start of
