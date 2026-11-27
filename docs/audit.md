@@ -125,3 +125,6 @@ Before a release, on the package of the release, in a 3ds Max started for the te
     again, they are still there (under the new key).
 17. **An environment Color Correct over an HDRI** in a scene where a material has a Color Correct of the same name:
     choosing it in the Environment card gives the HDRI's background, not the material's colour.
+18. **Drawing in a viewport** with the window open: start a line, a rectangle and a tape and cancel each with a
+    right-click, several times: 3ds Max does not stop (in 3.0.1 it could close with an access violation), and
+    once the object is made or cancelled the cards show the scene as it is.

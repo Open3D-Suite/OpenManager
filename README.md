@@ -9,10 +9,10 @@ come with 3ds Max) and MAXScript: no separate program and no account.
 OpenManager 3 is the plug-in that was called OpenScene up to version 2.2.2, and it replaces OpenManager 0.x, whose
 code is archived in [OpenManager-Legacy](https://github.com/Open3D-Suite/OpenManager-Legacy).
 
-> Status: early (v3.0.1).
+> Status: early (v3.0.2).
 > What each version adds: [CHANGELOG.md](CHANGELOG.md).
 
-**3ds Max:** 2025 or newer, on Windows. OpenScene 2.x was used on 3ds Max 2026.3 with Corona 14. Version 3.0.1 has not
+**3ds Max:** 2025 or newer, on Windows. OpenScene 2.x was used on 3ds Max 2026.3 with Corona 14. Version 3.0.2 has not
 been through the real test in 3ds Max yet, so no version is listed as tested; 2025, 2026 and 2027 should work.
 
 **Renderers:** Corona (every card), V-Ray and V-Ray GPU (tables included); FStorm, Redshift and Arnold with less
